@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import StudentDetailsModal from "./StudentDetailsModal"; // นำเข้า StudentDetailsModal
+import StudentDetailsModal from "./StudentDetailsModal";
 
 const Students = () => {
   const [students, setStudents] = useState([]);
@@ -11,7 +11,7 @@ const Students = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [studentDetails, setStudentDetails] = useState(null); // เปลี่ยนค่าเริ่มต้นเป็น null
+  const [studentDetails, setStudentDetails] = useState(null);
 
   useEffect(() => {
     fetch("http://localhost:3000/api/students")
@@ -27,7 +27,6 @@ const Students = () => {
       .then((data) => setDepartments(data));
   }, []);
 
-  // ฟังก์ชันค้นหาข้อมูลและกรองข้อมูล
   const filteredStudents = students
     .filter(
       (student) =>
@@ -41,9 +40,6 @@ const Students = () => {
           ? student.FirstName.toLowerCase().includes(
               searchQuery.toLowerCase()
             ) ||
-            student.StudentStatus.toLowerCase().includes(
-              searchQuery.toLowerCase()
-            )||
             student.LastName.toLowerCase().includes(
               searchQuery.toLowerCase()
             ) ||
@@ -61,19 +57,20 @@ const Students = () => {
         )?.DepartmentName || "ไม่ระบุ",
     }));
 
-  // การแบ่งหน้าข้อมูล
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
   const paginatedStudents = filteredStudents.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // ฟังก์ชันดูรายละเอียดนักศึกษา
   const viewDetails = (studentID) => {
     fetch(`http://localhost:3000/api/student/${studentID}`)
       .then((response) => response.json())
       .then((data) => {
-        setStudentDetails(data);
+        setStudentDetails({
+          student: data.student,
+          helmetDetections: data.helmetDetections,
+        });
         setSelectedStudent(studentID);
       });
   };
@@ -92,7 +89,7 @@ const Students = () => {
         <input
           type="text"
           className="block w-full p-2 border border-gray-300 rounded"
-          placeholder="ค้นหาชื่อหรือรหัสนักศึกษา"
+          placeholder="ค้นหาชื่อหรือนามสกุลหรือรหัสนักศึกษา"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -137,8 +134,8 @@ const Students = () => {
         <thead>
           <tr>
             <th className="py-2 px-4 border-b">รหัสนักศึกษา</th>
-            <th className="py-2 px-4 border-b">ชื่อนักศึกษา</th>
-            <th className="py-2 px-4 border-b">นามสกุลนักศึกษา</th>
+            <th className="py-2 px-4 border-b">ชื่อ</th>
+            <th className="py-2 px-4 border-b">นามสกุล</th>
             <th className="py-2 px-4 border-b">สถานะ</th>
             <th className="py-2 px-4 border-b">คณะ</th>
             <th className="py-2 px-4 border-b">สาขาวิชา</th>
@@ -156,7 +153,7 @@ const Students = () => {
               <td className="py-2 px-4 border-b">{student.departmentName}</td>
               <td className="py-2 px-4 border-b">
                 <button
-                  className="bg-blue-500 text-white hover:bg-blue-600 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200 ease-in-out py-2 px-4 rounded-md shadow-sm"
+                  className="bg-blue-500 text-white py-1 px-2 rounded"
                   onClick={() => viewDetails(student.StudentID)}
                 >
                   ดูรายละเอียด
@@ -167,28 +164,24 @@ const Students = () => {
         </tbody>
       </table>
 
-      <div className="mt-4 flex justify-between">
+      <div className="mt-4">
         <button
-          className="p-2 border border-gray-300 rounded"
+          className="bg-blue-500 text-white py-2 px-4 rounded mr-2"
           disabled={currentPage === 1}
-          onClick={() => setCurrentPage((prevPage) => prevPage - 1)}
+          onClick={() => setCurrentPage(currentPage - 1)}
         >
           ก่อนหน้า
         </button>
-        <span>
-          หน้า {currentPage} จาก {totalPages}
-        </span>
         <button
-          className="p-2 border border-gray-300 rounded"
+          className="bg-blue-500 text-white py-2 px-4 rounded"
           disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((prevPage) => prevPage + 1)}
+          onClick={() => setCurrentPage(currentPage + 1)}
         >
           ถัดไป
         </button>
       </div>
 
-      {/* แสดงโมดอลเมื่อมีการเลือกนักศึกษา */}
-      {selectedStudent && (
+      {selectedStudent && studentDetails && (
         <StudentDetailsModal
           studentDetails={studentDetails}
           onClose={closeModal}

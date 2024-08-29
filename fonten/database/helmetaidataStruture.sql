@@ -11,7 +11,7 @@
  Target Server Version : 100432 (10.4.32-MariaDB)
  File Encoding         : 65001
 
- Date: 27/08/2024 03:04:38
+ Date: 30/08/2024 01:49:33
 */
 
 SET NAMES utf8mb4;
@@ -46,42 +46,27 @@ CREATE TABLE `faculties`  (
 DROP TABLE IF EXISTS `helmetdetection`;
 CREATE TABLE `helmetdetection`  (
   `DetectionID` int NOT NULL AUTO_INCREMENT COMMENT 'รหัสการตรวจจับ (Primary Key)',
-  `StudentID` int NULL DEFAULT NULL COMMENT 'รหัสนักศึกษา (Foreign Key)',
-  `LicensePlateID` int NULL DEFAULT NULL COMMENT 'รหัสทะเบียนรถ (Foreign Key)',
+  `StudentID` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT 'รหัสนักศึกษา (Foreign Key)',
   `DetectionTime` datetime NOT NULL COMMENT 'เวลาการตรวจจับ',
   `ImageURL` text CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT 'ลิงค์หรือที่อยู่ของภาพการตรวจจับ',
   PRIMARY KEY (`DetectionID`) USING BTREE,
   INDEX `StudentID`(`StudentID` ASC) USING BTREE,
-  INDEX `LicensePlateID`(`LicensePlateID` ASC) USING BTREE,
-  CONSTRAINT `helmetdetection_ibfk_1` FOREIGN KEY (`StudentID`) REFERENCES `students` (`StudentID`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `helmetdetection_ibfk_2` FOREIGN KEY (`LicensePlateID`) REFERENCES `licenseplates` (`LicensePlateID`) ON DELETE RESTRICT ON UPDATE RESTRICT
+  CONSTRAINT `helmetdetection_ibfk_1` FOREIGN KEY (`StudentID`) REFERENCES `students` (`StudentID`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE = InnoDB AUTO_INCREMENT = 81 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = 'ตารางสำหรับจัดเก็บข้อมูลการตรวจจับหมวกกันน็อก' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Table structure for licenseplates
--- ----------------------------
-DROP TABLE IF EXISTS `licenseplates`;
-CREATE TABLE `licenseplates`  (
-  `LicensePlateID` int NOT NULL AUTO_INCREMENT COMMENT 'รหัสทะเบียนรถ (Primary Key)',
-  `LicensePlate` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT 'หมายเลขทะเบียนรถ',
-  `StudentID` int NULL DEFAULT NULL COMMENT 'รหัสนักศึกษา (Foreign Key)',
-  PRIMARY KEY (`LicensePlateID`) USING BTREE,
-  INDEX `StudentID`(`StudentID` ASC) USING BTREE,
-  CONSTRAINT `licenseplates_ibfk_1` FOREIGN KEY (`StudentID`) REFERENCES `students` (`StudentID`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 21 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = 'ตารางสำหรับจัดเก็บข้อมูลหมายเลขทะเบียนรถ' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for students
 -- ----------------------------
 DROP TABLE IF EXISTS `students`;
 CREATE TABLE `students`  (
-  `StudentID` int NOT NULL COMMENT 'รหัสนักศึกษา',
+  `StudentID` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT 'รหัสนักศึกษา',
   `FirstName` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT 'ชื่อนักศึกษา',
   `LastName` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT 'นามสกุลนักศึกษา',
   `FacultyID` int NULL DEFAULT NULL COMMENT 'รหัสคณะ (Foreign Key)',
   `DepartmentID` int NULL DEFAULT NULL COMMENT 'รหัสสาขาวิชา (Foreign Key)',
   `PasswordHash` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT 'รหัสผ่านที่เข้ารหัสแล้ว',
   `StudentStatus` enum('กำลังศึกษา','ออกจากการศึกษา') CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT 'กำลังศึกษา' COMMENT 'สถานะการศึกษา',
+  `LicensePlate` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT 'หมายเลขทะเบียนรถ',
   PRIMARY KEY (`StudentID`) USING BTREE,
   INDEX `FacultyID`(`FacultyID` ASC) USING BTREE,
   INDEX `DepartmentID`(`DepartmentID` ASC) USING BTREE,

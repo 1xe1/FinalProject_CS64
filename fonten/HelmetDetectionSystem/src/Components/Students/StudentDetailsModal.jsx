@@ -1,85 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
+// Format date and time
 const formatDate = (dateString) => {
+  if (!dateString) return 'ไม่ระบุ'; // Handle empty or invalid date
   const date = new Date(dateString);
-  return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+  return isNaN(date.getTime()) ? 'ไม่ระบุ' : date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
 const formatTime = (dateString) => {
+  if (!dateString) return 'ไม่ระบุ'; // Handle empty or invalid date
   const date = new Date(dateString);
-  return date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  return isNaN(date.getTime()) ? 'ไม่ระบุ' : date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 };
 
 const StudentDetailsModal = ({ studentDetails, onClose }) => {
-  const [visibleDetections, setVisibleDetections] = useState(5); // Number of detections to show initially
+  const [visibleDetections, setVisibleDetections] = useState(5);
+
+  // Use effect to log the studentDetails for debugging
+  useEffect(() => {
+    console.log('Student Details:', studentDetails);
+  }, [studentDetails]);
 
   if (!studentDetails) return null;
 
+  const { student, helmetDetections } = studentDetails;
+
+  // Ensure helmetDetections is an array and log it for debugging
+  const detections = Array.isArray(helmetDetections) ? helmetDetections : [];
+  console.log('Helmet Detections:', detections);
+
   const loadMoreDetections = () => {
-    setVisibleDetections(prev => prev + 5); // Load 5 more detections
+    setVisibleDetections((prev) => prev + 5);
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="fixed inset-0 bg-gray-800 opacity-60" onClick={onClose}></div>
-      <div className="bg-white p-8 lg:p-16 rounded-lg shadow-lg z-10 max-w-6xl mx-auto relative flex flex-col lg:flex-row">
-        <button 
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 focus:outline-none transition-colors duration-200" 
+    <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-4 rounded-lg w-1/2 max-w-4xl relative">
+        <button
+          className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
           onClick={onClose}
-          aria-label="ปิด"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
+          &times;
         </button>
-        <div className="flex-1 lg:mr-8">
-          <h2 className="text-2xl font-bold mb-8 text-center lg:text-left">รายละเอียดข้อมูลนักศึกษา</h2>
-
-          <div className="mb-8">
-            <p className="mb-2"><strong>รหัสนักศึกษา:</strong> {studentDetails.student.StudentID}</p>
-            <p className="mb-2"><strong>ชื่อ:</strong> {studentDetails.student.FirstName}</p>
-            <p className="mb-2"><strong>นามสกุล:</strong> {studentDetails.student.LastName}</p>
-            <p className="mb-2"><strong>สถานะการศึกษา:</strong> {studentDetails.student.StudentStatus}</p>
-          </div>
-
-          <div className="border-t border-gray-300 pt-4">
-            <h3 className="text-lg font-semibold mb-4">ข้อมูลทะเบียนรถ</h3>
-            <ul className="list-disc list-inside pl-4">
-              {studentDetails.licensePlates.length > 0 ? (
-                studentDetails.licensePlates.map(lp => (
-                  <li key={lp.LicensePlateID} className="mb-2">ทะเบียนรถ: {lp.LicensePlate}</li>
-                ))
-              ) : (
-                <li>ไม่มีข้อมูลทะเบียนรถ</li>
-              )}
-            </ul>
-          </div>
+        <h2 className="text-xl font-bold mb-4">รายละเอียดนักศึกษา</h2>
+        <div className="mb-4">
+          <p><strong>รหัสนักศึกษา:</strong> {student.StudentID}</p>
+          <p><strong>ชื่อ:</strong> {student.FirstName}</p>
+          <p><strong>นามสกุล:</strong> {student.LastName}</p>
+          <p><strong>สถานะ:</strong> {student.StudentStatus}</p>
+          <p><strong>คณะ:</strong> {student.FacultyName}</p>
+          <p><strong>สาขาวิชา:</strong> {student.DepartmentName}</p>
+          <p><strong>หมายเลขทะเบียนรถ:</strong> {student.LicensePlate}</p>
         </div>
-
-        <div className="lg:w-1/2 lg:pl-8 mt-8 lg:mt-0 flex-shrink-0">
-          <div className="border-t border-gray-300 pt-4 lg:pt-0 h-96 overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">ข้อมูลการตรวจจับหมวกกันน็อก</h3>
-            <ul className="list-disc list-inside pl-4">
-              {studentDetails.helmetDetections.slice(0, visibleDetections).map(hd => (
-                <li key={hd.DetectionID} className="mb-4">
-                  <p>วันที่: {formatDate(hd.DetectionTime)}</p>
-                  <p>เวลา: {formatTime(hd.DetectionTime)}</p>
-                  <a href={hd.ImageURL} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                    ดูภาพ
-                  </a>
-                </li>
+        <h3 className="text-lg font-semibold mb-2">ข้อมูลการตรวจจับหมวกกันน็อค</h3>
+        <div className="mb-4">
+          {detections.length > 0 ? (
+            <div>
+              {detections.slice(0, visibleDetections).map((detection, index) => (
+                <div key={index} className="border border-gray-300 rounded p-2 mb-2">
+                  <p><strong>เวลา:</strong> {formatDate(detection.timestamp)} {formatTime(detection.timestamp)}</p>
+                  <p><strong>หมายเลขทะเบียนรถ:</strong> {detection.licensePlate || 'ไม่ระบุ'}</p>
+                  <p><strong>หมวกกันน็อค:</strong> {detection.helmetDetected ? "สวมใส่" : "ไม่สวมใส่"}</p>
+                </div>
               ))}
-              {studentDetails.helmetDetections.length > visibleDetections && (
-                <button 
-                  onClick={loadMoreDetections} 
-                  className="mt-4 text-blue-500 hover:underline focus:outline-none"
+              {detections.length > visibleDetections && (
+                <button
+                  className="mt-2 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                  onClick={loadMoreDetections}
                 >
-                  ดูเพิ่มเติม
+                  โหลดเพิ่มเติม
                 </button>
               )}
-            </ul>
-            {studentDetails.helmetDetections.length === 0 && <p>ไม่มีข้อมูลการตรวจจับหมวกกันน็อก</p>}
-          </div>
+            </div>
+          ) : (
+            <p>ไม่มีข้อมูลการตรวจจับหมวกกันน็อค</p> // Handle empty detection case
+          )}
         </div>
       </div>
     </div>
