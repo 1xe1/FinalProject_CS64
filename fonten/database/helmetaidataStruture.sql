@@ -48,7 +48,7 @@ CREATE TABLE `helmetdetection`  (
   `DetectionID` int NOT NULL AUTO_INCREMENT COMMENT 'รหัสการตรวจจับ (Primary Key)',
   `StudentID` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT 'รหัสนักศึกษา (Foreign Key)',
   `DetectionTime` datetime NOT NULL COMMENT 'เวลาการตรวจจับ',
-  `ImageURL` text CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT 'ลิงค์หรือที่อยู่ของภาพการตรวจจับ',
+  `ImageURL` text CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT 'patching image',
   PRIMARY KEY (`DetectionID`) USING BTREE,
   INDEX `StudentID`(`StudentID` ASC) USING BTREE,
   CONSTRAINT `helmetdetection_ibfk_1` FOREIGN KEY (`StudentID`) REFERENCES `students` (`StudentID`) ON DELETE RESTRICT ON UPDATE RESTRICT

@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const connection = require("./db"); // Import database connection
-const bcrypt = require("bcrypt");
+const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken"); // Import jwt for token generation
 const secretKey = "CRRU"; // Replace with a secure key
 const XLSX = require("xlsx"); // Import xlsx package
