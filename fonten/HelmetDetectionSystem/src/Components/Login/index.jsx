@@ -9,7 +9,7 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     try {
       const response = await fetch("http://localhost:3000/api/login", {
         method: "POST",
@@ -18,15 +18,17 @@ function Login() {
         },
         body: JSON.stringify({ studentID, password }),
       });
-
+  
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem("token", data.token);
         localStorage.setItem("studentName", `${data.student.FirstName} ${data.student.LastName}`);
         toast.success("เข้าสู่ระบบสำเร็จ!");
+        // ใช้ setTimeout เพื่อรอ 2 วินาทีก่อนรีเฟรช
         setTimeout(() => {
           navigate("/UserDashboard");
-        }, 2000); // Delay navigation to allow toast to display
+          window.location.reload(); // รีเฟรชหน้า
+        }, 2000); // ปรับเวลาตามที่ต้องการ
       } else {
         toast.error("รหัสนักศึกษาหรือรหัสผ่านไม่ถูกต้อง");
       }
@@ -35,6 +37,8 @@ function Login() {
       toast.error("เกิดข้อผิดพลาดในระบบ");
     }
   };
+  
+
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-pink-500 to-blue-700">

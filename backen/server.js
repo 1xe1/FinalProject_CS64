@@ -315,6 +315,89 @@ app.get("/api/statistics", (req, res) => {
   });
 });
 
+app.get('/api/user/detections', (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  jwt.verify(token, secretKey, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid token' });
+    }
+
+    const studentID = decoded.id;
+
+    const detectionsQuery = 'SELECT * FROM helmetdetection WHERE StudentID = ? ORDER BY DetectionTime DESC';
+    
+    connection.query(detectionsQuery, [studentID], (error, results) => {
+      if (error) return res.status(500).json({ error: 'Database error' });
+
+      res.json(results);
+    });
+  });
+});
+
+// Middleware for token verification
+const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  jwt.verify(token, secretKey, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid token' });
+    }
+    req.studentID = decoded.id;
+    next();
+  });
+};
+
+// Endpoint to get user profile data
+app.get("/api/user/profile", verifyToken, (req, res) => {
+  const query = `
+    SELECT s.StudentID, s.FirstName, s.LastName, s.FacultyID,s.DepartmentID,f.FacultyName, d.DepartmentName, s.LicensePlate
+    FROM students s
+    LEFT JOIN faculties f ON s.FacultyID = f.FacultyID
+    LEFT JOIN departments d ON s.DepartmentID = d.DepartmentID
+    WHERE s.StudentID = ?`;
+
+  connection.query(query, [req.studentID], (error, results) => {
+    if (error) {
+      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: "ไม่พบข้อมูลผู้ใช้" });
+    }
+    res.json(results[0]);
+  });
+});
+
+
+// Endpoint to update user profile data (except StudentID)
+app.put("/api/user/profile", verifyToken, (req, res) => {
+  const { firstName, lastName, facultyID, departmentID, licensePlate } = req.body;
+
+  // ตรวจสอบว่าค่าต่างๆ ถูกส่งมาหรือไม่
+  if (!firstName || !lastName || !facultyID || !departmentID || !licensePlate) {
+    return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน" });
+  }
+
+  const query = `
+    UPDATE students 
+    SET FirstName = ?, LastName = ?, FacultyID = ?, DepartmentID = ?, LicensePlate = ?
+    WHERE StudentID = ?
+  `;
+  const params = [firstName, lastName, facultyID, departmentID, licensePlate, req.studentID];
+
+  connection.query(query, params, (error, results) => {
+    if (error) {
+      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการแก้ไขข้อมูล" });
+    }
+    res.json({ message: "แก้ไขข้อมูลสำเร็จ" });
+  });
+});
+
 
 // Start the server
 app.listen(port, () => {

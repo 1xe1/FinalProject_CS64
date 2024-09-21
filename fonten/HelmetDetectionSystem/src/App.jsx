@@ -9,6 +9,7 @@ import "./App.css";
 import "react-toastify/dist/ReactToastify.css";
 import PrivateRoute from "./Components/PrivateRoute";
 import AdminDashboard from "./Components/AdminDashboard";
+import UserProfile from "./Components/UserProfile";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -22,6 +23,7 @@ function App() {
     <>
       {!isAuthenticated ? (
         <Routes>
+          <Route path="*" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
         </Routes>
@@ -38,10 +40,10 @@ function App() {
                 path="/Students"
                 element={<PrivateRoute element={<Students />} />}
               />
-              {/* <Route
+              <Route
                 path="/UserProfile"
                 element={<PrivateRoute element={<UserProfile />} />}
-              /> */}
+              />
               <Route
                 path="/AdminDashboard"
                 element={<PrivateRoute element={<AdminDashboard />} />}

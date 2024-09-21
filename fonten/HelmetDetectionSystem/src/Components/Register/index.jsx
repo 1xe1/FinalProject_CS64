@@ -15,6 +15,7 @@ function Register() {
 
   const [faculties, setFaculties] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [filteredDepartments, setFilteredDepartments] = useState([]);
 
   useEffect(() => {
     const fetchFaculties = async () => {
@@ -47,6 +48,12 @@ function Register() {
       ...studentInfo,
       [name]: value
     });
+
+    if (name === 'faculty') {
+      const filtered = departments.filter(department => department.FacultyID === parseInt(value));
+      setFilteredDepartments(filtered);
+      setStudentInfo({ ...studentInfo, department: '', faculty: value });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -70,7 +77,6 @@ function Register() {
 
       if (response.ok) {
         alert(result.message);
-        // Redirect to login page
       } else {
         alert(result.error);
       }
@@ -81,113 +87,146 @@ function Register() {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-pink-500 to-blue-700">
-      <div className="bg-white p-10 w-full max-w-md rounded-lg shadow-xl text-center">
-        <h2 className="mb-6 text-2xl font-bold">ลงทะเบียน</h2>
+      <div className="bg-white p-10 w-full max-w-4xl rounded-lg shadow-xl text-center">
+        <h2 className="mb-6 text-2xl font-bold text-gray-700">ลงทะเบียน</h2>
         <form onSubmit={handleSubmit}>
-          <div className="mb-6">
-            <input
-              type="text"
-              name="studentID"
-              placeholder="รหัสนักศึกษา"
-              value={studentInfo.studentID}
-              onChange={handleChange}
-              required
-              className="w-full p-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* รหัสนักศึกษา */}
+            <div className="flex flex-col">
+              <label htmlFor="studentID" className="mb-2 text-left font-medium text-gray-600">รหัสนักศึกษา</label>
+              <input
+                type="text"
+                id="studentID"
+                name="studentID"
+                placeholder="รหัสนักศึกษา"
+                value={studentInfo.studentID}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 outline-none transition-colors"
+              />
+            </div>
+            {/* ทะเบียนรถ */}
+            <div className="flex flex-col">
+              <label htmlFor="licensePlate" className="mb-2 text-left font-medium text-gray-600">หมายเลขทะเบียนรถ</label>
+              <input
+                type="text"
+                id="licensePlate"
+                name="licensePlate"
+                placeholder="หมายเลขทะเบียนรถ"
+                value={studentInfo.licensePlate}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 outline-none transition-colors"
+              />
+            </div>
+            {/* ชื่อนักศึกษา */}
+            <div className="flex flex-col">
+              <label htmlFor="firstName" className="mb-2 text-left font-medium text-gray-600">ชื่อ</label>
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                placeholder="ชื่อ"
+                value={studentInfo.firstName}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 outline-none transition-colors"
+              />
+            </div>
+            {/* นามสกุลนักศึกษา */}
+            <div className="flex flex-col">
+              <label htmlFor="lastName" className="mb-2 text-left font-medium text-gray-600">นามสกุล</label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                placeholder="นามสกุล"
+                value={studentInfo.lastName}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 outline-none transition-colors"
+              />
+            </div>
+            
+            {/* เลือกคณะ */}
+            <div className="flex flex-col">
+              <label htmlFor="faculty" className="mb-2 text-left font-medium text-gray-600">เลือกคณะ</label>
+              <select
+                id="faculty"
+                name="faculty"
+                value={studentInfo.faculty}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 outline-none transition-colors"
+              >
+                <option value="">เลือกคณะ</option>
+                {faculties.map(faculty => (
+                  <option key={faculty.FacultyID} value={faculty.FacultyID}>
+                    {faculty.FacultyName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* เลือกสาขาวิชา */}
+            <div className="flex flex-col">
+              <label htmlFor="department" className="mb-2 text-left font-medium text-gray-600">เลือกสาขา</label>
+              <select
+                id="department"
+                name="department"
+                value={studentInfo.department}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 outline-none transition-colors"
+              >
+                <option value="">เลือกสาขา</option>
+                {filteredDepartments.map(department => (
+                  <option key={department.DepartmentID} value={department.DepartmentID}>
+                    {department.DepartmentName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* รหัสผ่าน */}
+            <div className="flex flex-col">
+              <label htmlFor="password" className="mb-2 text-left font-medium text-gray-600">รหัสผ่าน</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="รหัสผ่าน"
+                value={studentInfo.password}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 outline-none transition-colors"
+              />
+            </div>
+            {/* ยืนยันรหัสผ่าน */}
+            <div className="flex flex-col">
+              <label htmlFor="confirmPassword" className="mb-2 text-left font-medium text-gray-600">ยืนยันรหัสผ่าน</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                placeholder="ยืนยันรหัสผ่าน"
+                value={studentInfo.confirmPassword}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 outline-none transition-colors"
+              />
+            </div>
           </div>
-          <div className="mb-6">
-            <input
-              type="text"
-              name="firstName"
-              placeholder="ชื่อ"
-              value={studentInfo.firstName}
-              onChange={handleChange}
-              required
-              className="w-full p-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors"
-            />
-          </div>
-          <div className="mb-6">
-            <input
-              type="text"
-              name="lastName"
-              placeholder="นามสกุล"
-              value={studentInfo.lastName}
-              onChange={handleChange}
-              required
-              className="w-full p-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors"
-            />
-          </div>
-          <div className="mb-6">
-            <input
-              type="password"
-              name="password"
-              placeholder="รหัสผ่าน"
-              value={studentInfo.password}
-              onChange={handleChange}
-              required
-              className="w-full p-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors"
-            />
-          </div>
-          <div className="mb-6">
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="ยืนยันรหัสผ่าน"
-              value={studentInfo.confirmPassword}
-              onChange={handleChange}
-              required
-              className="w-full p-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors"
-            />
-          </div>
-          <div className="mb-6">
-            <select
-              name="faculty"
-              value={studentInfo.faculty}
-              onChange={handleChange}
-              required
-              className="w-full p-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors"
+
+          {/* ปุ่มสมัครสมาชิก */}
+          <div className="mt-6 flex justify-center">
+            <button
+              type="submit"
+              className="w-full max-w-xs p-3 bg-gradient-to-r from-blue-600 to-pink-500 text-white font-semibold rounded-lg hover:bg-gradient-to-r hover:from-pink-500 hover:to-blue-600 transition-colors"
             >
-              <option value="">เลือกคณะ</option>
-              {faculties.map(faculty => (
-                <option key={faculty.FacultyID} value={faculty.FacultyID}>
-                  {faculty.FacultyName}
-                </option>
-              ))}
-            </select>
+              สมัครสมาชิก
+            </button>
           </div>
-          <div className="mb-6">
-            <select
-              name="department"
-              value={studentInfo.department}
-              onChange={handleChange}
-              required
-              className="w-full p-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors"
-            >
-              <option value="">เลือกสาขา</option>
-              {departments.map(department => (
-                <option key={department.DepartmentID} value={department.DepartmentID}>
-                  {department.DepartmentName}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-6">
-            <input
-              type="text"
-              name="licensePlate"
-              placeholder="หมายเลขทะเบียนรถ"
-              value={studentInfo.licensePlate}
-              onChange={handleChange}
-              required
-              className="w-full p-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-4/5 p-3 bg-gradient-to-r from-blue-600 to-pink-500 text-white font-semibold rounded-lg hover:bg-gradient-to-r hover:from-pink-500 hover:to-blue-600 transition-colors"
-          >
-            สมัครสมาชิก
-          </button>
+
           <Link to="/Login" className="block mt-6 text-blue-600 hover:underline">
             เข้าสู่ระบบ
           </Link>
