@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from "react";
-import StudentDetailsModal from "./StudentDetailsModal";
 
 const Students = () => {
   const [students, setStudents] = useState([]);
   const [faculties, setFaculties] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [filteredDepartments, setFilteredDepartments] = useState([]);
   const [selectedFaculty, setSelectedFaculty] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [studentDetails, setStudentDetails] = useState(null);
 
   useEffect(() => {
     fetch("http://localhost:3000/api/students")
@@ -26,6 +24,25 @@ const Students = () => {
       .then((response) => response.json())
       .then((data) => setDepartments(data));
   }, []);
+
+  // ฟังก์ชันกรองสาขาวิชาตาม FacultyID
+  const filterDepartmentsByFaculty = (facultyID) => {
+    if (facultyID) {
+      const filtered = departments.filter(
+        (department) => department.FacultyID === parseInt(facultyID)
+      );
+      setFilteredDepartments(filtered);
+    } else {
+      setFilteredDepartments(departments); // ถ้าไม่ได้เลือกคณะใดๆ ให้แสดงสาขาวิชาทั้งหมด
+    }
+  };
+
+  // อัปเดตการกรองสาขาวิชาเมื่อเลือกคณะ
+  const handleFacultyChange = (e) => {
+    const facultyID = e.target.value;
+    setSelectedFaculty(facultyID);
+    filterDepartmentsByFaculty(facultyID);
+  };
 
   const filteredStudents = students
     .filter(
@@ -63,23 +80,6 @@ const Students = () => {
     currentPage * itemsPerPage
   );
 
-  const viewDetails = (studentID) => {
-    fetch(`http://localhost:3000/api/student/${studentID}`)
-      .then((response) => response.json())
-      .then((data) => {
-        setStudentDetails({
-          student: data.student,
-          helmetDetections: data.helmetDetections,
-        });
-        setSelectedStudent(studentID);
-      });
-  };
-
-  const closeModal = () => {
-    setSelectedStudent(null);
-    setStudentDetails(null);
-  };
-
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">ข้อมูลนักศึกษา</h1>
@@ -100,7 +100,7 @@ const Students = () => {
         <select
           className="block w-full p-2 border border-gray-300 rounded"
           value={selectedFaculty}
-          onChange={(e) => setSelectedFaculty(e.target.value)}
+          onChange={handleFacultyChange} // อัปเดตเมื่อเปลี่ยนคณะ
         >
           <option value="">ทั้งหมด</option>
           {faculties.map((faculty) => (
@@ -119,7 +119,7 @@ const Students = () => {
           onChange={(e) => setSelectedDepartment(e.target.value)}
         >
           <option value="">ทั้งหมด</option>
-          {departments.map((department) => (
+          {filteredDepartments.map((department) => (
             <option
               key={department.DepartmentID}
               value={department.DepartmentID}
@@ -137,9 +137,6 @@ const Students = () => {
             <th className="py-2 px-4 border-b">ชื่อ</th>
             <th className="py-2 px-4 border-b">นามสกุล</th>
             <th className="py-2 px-4 border-b">สถานะ</th>
-            <th className="py-2 px-4 border-b">คณะ</th>
-            <th className="py-2 px-4 border-b">สาขาวิชา</th>
-            <th className="py-2 px-4 border-b">รายละเอียด</th>
           </tr>
         </thead>
         <tbody>
@@ -149,16 +146,14 @@ const Students = () => {
               <td className="py-2 px-4 border-b">{student.FirstName}</td>
               <td className="py-2 px-4 border-b">{student.LastName}</td>
               <td className="py-2 px-4 border-b">{student.StudentStatus}</td>
-              <td className="py-2 px-4 border-b">{student.facultyName}</td>
-              <td className="py-2 px-4 border-b">{student.departmentName}</td>
-              <td className="py-2 px-4 border-b">
-                <button
-                  className="bg-blue-500 text-white py-1 px-2 rounded"
-                  onClick={() => viewDetails(student.StudentID)}
-                >
-                  ดูรายละเอียด
-                </button>
-              </td>
+              {/* <td className="py-2 px-4 border-b">
+  <Link
+    to={`/StudentDetails/${student.StudentID}`} // ส่งรหัสนักศึกษาไปยังหน้ารายละเอียด
+    className="text-blue-500 hover:underline"
+  >
+    ดูรายละเอียด
+  </Link>
+</td> */}
             </tr>
           ))}
         </tbody>
@@ -180,13 +175,6 @@ const Students = () => {
           ถัดไป
         </button>
       </div>
-
-      {selectedStudent && studentDetails && (
-        <StudentDetailsModal
-          studentDetails={studentDetails}
-          onClose={closeModal}
-        />
-      )}
     </div>
   );
 };

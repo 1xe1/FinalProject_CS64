@@ -6,6 +6,7 @@ import "./Navbar.css"; // If you still have custom styles in this file
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const studentName = localStorage.getItem("studentName") || "Guest";
+  const userRole = localStorage.getItem("userRole") || "Guest";
 
   const handleMenuToggle = () => {
     setMenuOpen((prev) => !prev);
@@ -14,6 +15,7 @@ const Navbar = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("studentName");
+    localStorage.removeItem("userRole");
     window.location.href = "/login"; // Redirect to login
   };
 
@@ -30,24 +32,30 @@ const Navbar = () => {
       <ul className="list-none p-0 m-0">
         <li className="mb-5">
           <div className="text-sm">หน้าหลัก</div>
+          {userRole === "student" ? (
           <div className="pl-5">
             <Link to="/UserDashboard" className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors">
               <Icon icon="mdi:home" className="text-2xl mr-2" />
               หน้าหลัก
             </Link>
           </div>
+          ):null}
+          {userRole === "teacher" || userRole === "admin" ? (
           <div className="pl-5">
             <Link to="/Students" className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors">
               <Icon icon="ph:user-list" className="text-2xl mr-2" />
               ข้อมูลนักศึกษา
             </Link>
           </div>
+          ) : null}
+          {userRole === "admin" ? (
           <div className="pl-5">
             <Link to="/AdminDashboard" className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors">
               <Icon icon="uil:chart" className="text-2xl mr-2" />
               รายงานสรุปสถิติ
             </Link>
           </div>
+          ) : null}
         </li>
       </ul>
       <div className="absolute bottom-5 w-[calc(100%-2rem)]">

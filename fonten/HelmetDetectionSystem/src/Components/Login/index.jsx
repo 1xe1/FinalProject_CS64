@@ -23,12 +23,12 @@ function Login() {
         const data = await response.json();
         localStorage.setItem("token", data.token);
         localStorage.setItem("studentName", `${data.student.FirstName} ${data.student.LastName}`);
+        localStorage.setItem("userRole", data.student.UserRole); // บันทึก UserRole ลงใน localStorage
         toast.success("เข้าสู่ระบบสำเร็จ!");
-        // ใช้ setTimeout เพื่อรอ 2 วินาทีก่อนรีเฟรช
         setTimeout(() => {
           navigate("/UserDashboard");
           window.location.reload(); // รีเฟรชหน้า
-        }, 2000); // ปรับเวลาตามที่ต้องการ
+        }, 2000);
       } else {
         toast.error("รหัสนักศึกษาหรือรหัสผ่านไม่ถูกต้อง");
       }
@@ -37,7 +37,6 @@ function Login() {
       toast.error("เกิดข้อผิดพลาดในระบบ");
     }
   };
-  
 
 
   return (
