@@ -19,9 +19,10 @@ app.use(express.json());
 app.get("/api/students", (req, res) => {
   const { facultyID, departmentID } = req.query;
 
-  let query = "SELECT * FROM students WHERE 1=1";
+  let query = "SELECT * FROM students WHERE UserRole = 'student'";
   let params = [];
 
+  // Add additional conditions based on query parameters
   if (facultyID) {
     query += " AND FacultyID = ?";
     params.push(parseInt(facultyID));
@@ -44,11 +45,18 @@ app.get("/api/students", (req, res) => {
   });
 });
 
+
 // Endpoint to get detailed student information
 app.get("/api/student/:id", (req, res) => {
   const studentID = req.params.id;
 
-  const studentQuery = "SELECT * FROM students WHERE StudentID = ?";
+  // const studentQuery = "SELECT * FROM students WHERE StudentID = ?";
+  const studentQuery = `
+  SELECT s.StudentID, s.FirstName, s.LastName,s.StudentStatus, s.FacultyID,s.DepartmentID,f.FacultyName, d.DepartmentName, s.LicensePlate
+  FROM students s
+  LEFT JOIN faculties f ON s.FacultyID = f.FacultyID
+  LEFT JOIN departments d ON s.DepartmentID = d.DepartmentID
+  WHERE s.StudentID = ?`;
   const studentParams = [studentID];
 
   const helmetDetectionQuery =
@@ -395,6 +403,127 @@ app.put("/api/user/profile", verifyToken, (req, res) => {
       return res.status(500).json({ error: "เกิดข้อผิดพลาดในการแก้ไขข้อมูล" });
     }
     res.json({ message: "แก้ไขข้อมูลสำเร็จ" });
+  });
+});
+
+// Endpoint to get student-specific statistics
+app.get('/api/student/:id/statistics', (req, res) => {
+  const studentID = req.params.id;
+
+  // Queries to fetch statistics for the specified student
+  const todayQuery = 'SELECT COUNT(*) AS count FROM helmetdetection WHERE StudentID = ? AND DATE(DetectionTime) = CURDATE()';
+  const monthQuery = 'SELECT COUNT(*) AS count FROM helmetdetection WHERE StudentID = ? AND YEAR(DetectionTime) = YEAR(CURDATE()) AND MONTH(DetectionTime) = MONTH(CURDATE())';
+  const allTimeQuery = 'SELECT COUNT(*) AS count FROM helmetdetection WHERE StudentID = ?';
+
+  connection.query(todayQuery, [studentID], (error, todayResults) => {
+    if (error) {
+      console.error('Database error:', error);
+      return res.status(500).json({ error: 'Error fetching today\'s statistics' });
+    }
+
+    connection.query(monthQuery, [studentID], (error, monthResults) => {
+      if (error) {
+        console.error('Database error:', error);
+        return res.status(500).json({ error: 'Error fetching this month\'s statistics' });
+      }
+
+      connection.query(allTimeQuery, [studentID], (error, allTimeResults) => {
+        if (error) {
+          console.error('Database error:', error);
+          return res.status(500).json({ error: 'Error fetching all-time statistics' });
+        }
+
+        res.json({
+          today: todayResults[0].count,
+          month: monthResults[0].count,
+          allTime: allTimeResults[0].count,
+        });
+      });
+    });
+  });
+});
+
+
+// Endpoint to get helmet detection data for a specific student
+app.get('/api/student/:id/detections', (req, res) => {
+  const studentID = req.params.id;
+
+  const detectionsQuery = 'SELECT * FROM helmetdetection WHERE StudentID = ? ORDER BY DetectionTime DESC';
+
+  connection.query(detectionsQuery, [studentID], (error, results) => {
+    if (error) {
+      console.error('Database error:', error);
+      return res.status(500).json({ error: 'Error fetching helmet detection data' });
+    }
+
+    res.json(results);
+  });
+});
+
+// Example backend code to update student status
+app.put('/api/student/:id/status', (req, res) => {
+  const studentId = req.params.id;
+  const { status } = req.body;
+
+  const query = 'UPDATE students SET StudentStatus = ? WHERE StudentID = ?';
+  connection.query(query, [status, studentId], (error) => {
+    if (error) {
+      return res.status(500).json({ error: 'Error updating student status' });
+    }
+    res.json({ message: 'Status updated successfully' });
+  });
+});
+
+// Endpoint to update a user's role
+app.put("/api/users/:id/role", (req, res) => {
+  const studentId = req.params.id;
+  const { role } = req.body;
+
+  // Validate the role
+  if (!["student", "teacher", "admin"].includes(role)) {
+    return res.status(400).json({ error: "Invalid role specified" });
+  }
+
+  const query = "UPDATE students SET UserRole = ? WHERE StudentID = ?";
+  connection.query(query, [role, studentId], (error) => {
+    if (error) {
+      console.error("Database error:", error);
+      return res.status(500).json({ error: "Error updating user role" });
+    }
+    // Send back the updated user role information
+    res.json({ message: "User role updated successfully", StudentID: studentId, UserRole: role });
+  });
+});
+
+
+
+// Endpoint to get student data
+app.get("/api/Adminstudents", (req, res) => {
+  const { facultyID, departmentID } = req.query;
+
+  let query = "SELECT * FROM students";
+  let params = [];
+
+  // Add additional conditions based on query parameters
+  if (facultyID || departmentID) {
+    query += " WHERE";
+    if (facultyID) {
+      query += " FacultyID = ?";
+      params.push(parseInt(facultyID));
+    }
+    if (departmentID) {
+      if (params.length > 0) query += " AND";
+      query += " DepartmentID = ?";
+      params.push(parseInt(departmentID));
+    }
+  }
+
+  connection.query(query, params, (error, results) => {
+    if (error) {
+      console.error("Database error:", error);
+      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+    }
+    res.json(results);
   });
 });
 

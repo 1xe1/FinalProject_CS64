@@ -11,6 +11,8 @@ import PrivateRoute from "./Components/PrivateRoute";
 import AdminDashboard from "./Components/AdminDashboard";
 import UserProfile from "./Components/UserProfile";
 import Unauthorized from "./Components/Unauthorized";
+import StudentDetails from "./Components/StudentDetails";
+import ManageUserRoles from "./Components/ManageUserRoles";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -49,8 +51,13 @@ function App() {
                 path="/AdminDashboard"
                 element={<PrivateRoute element={<AdminDashboard />} requiredRole="admin" />}
               />
+              <Route
+                path="/ManageUserRoles"
+                element={<PrivateRoute element={<ManageUserRoles />} requiredRole="admin" />}
+              />
               <Route path="/Register" element={<Register />} />
               <Route path="/Unauthorized" element={<Unauthorized />} />
+              <Route path="/students/:studentId" element={<PrivateRoute element={<StudentDetails />} />} />
             </Routes>
           </div>
         </div>

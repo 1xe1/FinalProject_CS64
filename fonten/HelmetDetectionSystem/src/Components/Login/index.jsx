@@ -9,7 +9,7 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     try {
       const response = await fetch("http://localhost:3000/api/login", {
         method: "POST",
@@ -18,15 +18,25 @@ function Login() {
         },
         body: JSON.stringify({ studentID, password }),
       });
-  
+
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem("token", data.token);
-        localStorage.setItem("studentName", `${data.student.FirstName} ${data.student.LastName}`);
+        localStorage.setItem(
+          "studentName",
+          `${data.student.FirstName} ${data.student.LastName}`
+        );
         localStorage.setItem("userRole", data.student.UserRole); // บันทึก UserRole ลงใน localStorage
         toast.success("เข้าสู่ระบบสำเร็จ!");
         setTimeout(() => {
-          navigate("/UserDashboard");
+          if (data.student.UserRole === "student") {
+            navigate("/UserDashboard");
+          } else if (data.student.UserRole === "teacher") {
+            navigate("/Students");
+          } else if (data.student.UserRole === "admin") {
+            navigate("/AdminDashboard");
+          }
+
           window.location.reload(); // รีเฟรชหน้า
         }, 2000);
       } else {
@@ -37,7 +47,6 @@ function Login() {
       toast.error("เกิดข้อผิดพลาดในระบบ");
     }
   };
-
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-pink-500 to-blue-700">
