@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Line, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { saveAs } from 'file-saver'; // Install file-saver to handle file downloads
+import { saveAs } from 'file-saver'; // ใช้ file-saver เพื่อจัดการดาวน์โหลดไฟล์
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
 
@@ -40,7 +40,25 @@ const AdminDashboard = () => {
     fetchStatistics();
   }, []);
 
-
+  // Function to handle export
+  const handleExport = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/export/without-helmet', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        },
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        saveAs(blob, 'students_without_helmet.xlsx'); // Save the file with a specific name
+      } else {
+        console.error('Failed to export data');
+      }
+    } catch (error) {
+      console.error('Error exporting data:', error);
+    }
+  };
 
   return (
     <div className="dashboard-container">
@@ -60,6 +78,17 @@ const AdminDashboard = () => {
             <p className="text-lg text-gray-700">จำนวน: {statistics.allTime}</p>
           </div>
         </div>
+        
+        {/* ปุ่มสำหรับ Export ข้อมูล */}
+        <div className="w-full max-w-4xl mb-10">
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition duration-300"
+          >
+            ดาวน์โหลดข้อมูลนักศึกษาที่ไม่สวมหมวกกันน็อค
+          </button>
+        </div>
+
         <div className="w-full max-w-4xl mb-10">
           <h2 className="mb-5 text-2xl text-gray-800">กราฟสถิติการตรวจจับรายเดือน</h2>
           <div className="bg-white p-5 rounded-lg shadow-lg">

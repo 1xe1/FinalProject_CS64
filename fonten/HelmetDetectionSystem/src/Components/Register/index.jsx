@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function Register() {
   const [studentInfo, setStudentInfo] = useState({
@@ -16,6 +18,8 @@ function Register() {
   const [faculties, setFaculties] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [filteredDepartments, setFilteredDepartments] = useState([]);
+
+  const navigate = useNavigate(); // Initialize useNavigate
 
   useEffect(() => {
     const fetchFaculties = async () => {
@@ -60,7 +64,7 @@ function Register() {
     e.preventDefault();
 
     if (studentInfo.password !== studentInfo.confirmPassword) {
-      alert('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน');
+      toast.error('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน');
       return;
     }
 
@@ -76,18 +80,23 @@ function Register() {
       const result = await response.json();
 
       if (response.ok) {
-        alert(result.message);
+        toast.success(result.message);
+        setTimeout(() => {
+          navigate('/login'); // Redirect to login after successful registration
+        }, 2000); // Wait for 2 seconds before redirecting
       } else {
-        alert(result.error);
+        toast.error(result.error);
       }
     } catch (error) {
       console.error('Error during registration:', error);
+      toast.error('เกิดข้อผิดพลาดในการลงทะเบียน');
     }
   };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-pink-500 to-blue-700">
       <div className="bg-white p-10 w-full max-w-4xl rounded-lg shadow-xl text-center">
+        <ToastContainer />
         <h2 className="mb-6 text-2xl font-bold text-gray-700">ลงทะเบียน</h2>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

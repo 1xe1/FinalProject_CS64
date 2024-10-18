@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken"); // Import jwt for token generation
 const secretKey = "CRRU"; // Replace with a secure key
 const XLSX = require("xlsx"); // Import xlsx package
 
+
 const app = express();
 const port = 3000;
 
@@ -524,6 +525,48 @@ app.get("/api/Adminstudents", (req, res) => {
       return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
     }
     res.json(results);
+  });
+});
+
+// Endpoint to export student data without helmet
+app.get("/api/export/without-helmet", (req, res) => {
+  // Query to select students who were detected without a helmet
+  const query = `
+    SELECT s.StudentID, s.FirstName, s.LastName, s.LicensePlate, d.DetectionTime
+    FROM students s
+    JOIN helmetdetection d ON s.StudentID = d.StudentID
+    WHERE d.ImageURL IS NOT NULL
+    ORDER BY d.DetectionTime DESC
+  `;
+
+  connection.query(query, (error, results) => {
+    if (error) {
+      console.error("Database error:", error);
+      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+    }
+
+    // Create a new workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(results);
+
+    // Add the worksheet to the workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "StudentsWithoutHelmet");
+
+    // Write the workbook to a buffer
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" });
+
+    // Set the response headers to download the Excel file
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=students_without_helmet.xlsx"
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    // Send the Excel file as response
+    res.send(excelBuffer);
   });
 });
 

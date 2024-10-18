@@ -69,14 +69,15 @@ const Navbar = () => {
           )}
           {userRole === "admin" && (
             <div className="pl-5">
-              <Link
-                to="/ManageUserRoles"
-                className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
-              >
-                <Icon icon="uil:chart" className="text-2xl mr-2" />
-                จัดการสิทธิ์
-              </Link>
-            </div>
+  <Link
+    to="/ManageUserRoles"
+    className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
+  >
+    <Icon icon="mdi:account-cog" className="text-2xl mr-2" /> {/* เปลี่ยนไอคอนที่นี่ */}
+    จัดการสิทธิ์
+  </Link>
+</div>
+
           )}
           {userRole === "admin" && (
             <div className="pl-5">
@@ -118,7 +119,7 @@ const Navbar = () => {
                 onClick={handleLogout}
                 className="block px-4 py-2 w-full text-left hover:bg-[#2c3e50] transition-colors"
               >
-                Logout
+                ออกจากระบบ
               </button>
             </div>
           )}
@@ -137,7 +138,7 @@ const Navbar = () => {
                 onClick={confirmLogout}
                 className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
               >
-                ใช่, ออกจากระบบ
+                ออกจากระบบ
               </button>
               <button
                 onClick={cancelLogout}
