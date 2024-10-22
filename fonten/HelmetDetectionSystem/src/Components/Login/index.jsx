@@ -19,28 +19,28 @@ function Login() {
         body: JSON.stringify({ studentID, password }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
         localStorage.setItem("token", data.token);
-        localStorage.setItem(
-          "studentName",
-          `${data.student.FirstName} ${data.student.LastName}`
-        );
-        localStorage.setItem("userRole", data.student.UserRole); // บันทึก UserRole ลงใน localStorage
+        localStorage.setItem("userID", data.userID);
+        localStorage.setItem("userName", `${data.user.FirstName} ${data.user.LastName}`);
+        localStorage.setItem("userType", data.userType);
+        
         toast.success("เข้าสู่ระบบสำเร็จ!");
         setTimeout(() => {
-          if (data.student.UserRole === "student") {
+          if (data.userType === "student") {
             navigate("/UserDashboard");
-          } else if (data.student.UserRole === "teacher") {
+          } else if (data.userType === "teacher") {
             navigate("/Students");
-          } else if (data.student.UserRole === "admin") {
+          } else if (data.userType === "admin") {
             navigate("/AdminDashboard");
           }
-
-          window.location.reload(); // รีเฟรชหน้า
+          window.location.reload();
         }, 2000);
       } else {
-        toast.error("รหัสนักศึกษาหรือรหัสผ่านไม่ถูกต้อง");
+        // Display the error message from the server response
+        toast.error(data.error);
       }
     } catch (error) {
       console.error("Login error:", error);

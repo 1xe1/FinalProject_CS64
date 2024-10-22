@@ -5,8 +5,8 @@ import { Icon } from "@iconify/react";
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const studentName = localStorage.getItem("studentName") || "Guest";
-  const userRole = localStorage.getItem("userRole") || "Guest";
+  const userName = localStorage.getItem("userName") || "Guest";
+  const userType = localStorage.getItem("userType") || "Guest";
 
   const handleMenuToggle = () => {
     setMenuOpen((prev) => !prev);
@@ -23,8 +23,8 @@ const Navbar = () => {
 
   const confirmLogout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("studentName");
-    localStorage.removeItem("userRole");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userType");
     window.location.href = "/login"; // Redirect to login
   };
 
@@ -45,7 +45,7 @@ const Navbar = () => {
       <ul className="navbar-menu list-none p-0 m-0">
         <li className="mb-5">
           <div className="text-sm">หน้าหลัก</div>
-          {userRole === "student" && (
+          {userType === "student" && (
             <div className="pl-5">
               <Link
                 to="/UserDashboard"
@@ -56,7 +56,7 @@ const Navbar = () => {
               </Link>
             </div>
           )}
-          {(userRole === "teacher" || userRole === "admin") && (
+          {userType === "teacher" && (
             <div className="pl-5">
               <Link
                 to="/Students"
@@ -67,19 +67,19 @@ const Navbar = () => {
               </Link>
             </div>
           )}
-          {userRole === "admin" && (
+          {userType === "admin" && (
             <div className="pl-5">
-  <Link
-    to="/ManageUserRoles"
-    className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
-  >
-    <Icon icon="mdi:account-cog" className="text-2xl mr-2" /> {/* เปลี่ยนไอคอนที่นี่ */}
-    จัดการสิทธิ์
-  </Link>
-</div>
-
+              <Link
+                to="/ApproveUserRegistrations"
+                className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
+              >
+                <Icon icon="mdi:account-check" className="text-2xl mr-2" />{" "}
+                {/* เปลี่ยนไอคอนที่นี่ */}
+                อนุมัติการสมัครสมาชิก
+              </Link>
+            </div>
           )}
-          {userRole === "admin" && (
+          {userType === "admin" && (
             <div className="pl-5">
               <Link
                 to="/AdminDashboard"
@@ -101,20 +101,22 @@ const Navbar = () => {
             aria-controls="profile-menu"
           >
             <Icon icon="mdi:account-circle" className="text-2xl mr-2" />
-            {studentName}
+            {userName}
           </button>
           {menuOpen && (
             <div
               id="profile-menu"
               className="absolute right-0 bottom-full mb-2 w-full bg-[#1e2a38] text-white border border-[#2c3e50] rounded shadow-lg"
             >
-              <Link
-                to="/UserProfile"
-                className="block px-4 py-2 hover:bg-[#2c3e50] transition-colors"
-                onClick={handleProfileClick}
-              >
-                ข้อมูลส่วนตัว
-              </Link>
+              {userType === "student" && (
+                <Link
+                  to="/UserProfile"
+                  className="block px-4 py-2 hover:bg-[#2c3e50] transition-colors"
+                  onClick={handleProfileClick}
+                >
+                  ข้อมูลส่วนตัว
+                </Link>
+              )}
               <button
                 onClick={handleLogout}
                 className="block px-4 py-2 w-full text-left hover:bg-[#2c3e50] transition-colors"

@@ -3,11 +3,11 @@ import { Navigate } from "react-router-dom";
 
 const PrivateRoute = ({ element, requiredRole }) => {
   const token = localStorage.getItem("token");
-  const userRole = localStorage.getItem("userRole");
+  const userType = localStorage.getItem("userType");
   
   const isAuthenticated = !!token;
   const hasRequiredRole = requiredRole
-    ? requiredRole.split(",").includes(userRole)
+    ? requiredRole.split(",").includes(userType)
     : true;
 
   if (!isAuthenticated) {

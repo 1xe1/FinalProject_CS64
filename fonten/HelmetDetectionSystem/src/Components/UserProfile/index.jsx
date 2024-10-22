@@ -127,7 +127,7 @@ const UserProfile = () => {
       if (response.ok) {
         toast.success("ข้อมูลถูกบันทึกแล้ว");
         localStorage.setItem(
-          "studentName",
+          "userName",
           `${userData.firstName} ${userData.lastName}`
         );
         setEditing(false);

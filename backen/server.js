@@ -16,23 +16,18 @@ app.use(cors());
 // Middleware for JSON body parsing
 app.use(express.json());
 
-// Endpoint to get student data
+// Endpoint to get student data filtered by teacherID and status
 app.get("/api/students", (req, res) => {
-  const { facultyID, departmentID } = req.query;
+  const { teacherID } = req.query;
 
-  let query = "SELECT * FROM students WHERE UserRole = 'student'";
-  let params = [];
-
-  // Add additional conditions based on query parameters
-  if (facultyID) {
-    query += " AND FacultyID = ?";
-    params.push(parseInt(facultyID));
+  // Ensure that teacherID is provided
+  if (!teacherID) {
+    return res.status(400).json({ error: "Teacher ID is required" });
   }
 
-  if (departmentID) {
-    query += " AND DepartmentID = ?";
-    params.push(parseInt(departmentID));
-  }
+  // Query to fetch students associated with the teacher and specific statuses
+  const query = "SELECT * FROM students WHERE TeacherID = ? AND StudentStatus IN ('กำลังศึกษา', 'ออกจากการศึกษา')";
+  const params = [teacherID];
 
   console.log("Executing query:", query, "with params:", params);
 
@@ -45,7 +40,6 @@ app.get("/api/students", (req, res) => {
     res.json(results);
   });
 });
-
 
 // Endpoint to get detailed student information
 app.get("/api/student/:id", (req, res) => {
@@ -127,34 +121,79 @@ app.get("/api/departments", (req, res) => {
 app.post("/api/login", (req, res) => {
   const { studentID, password } = req.body;
 
-  const query = "SELECT * FROM students WHERE StudentID = ?";
-  connection.query(query, [studentID], async (error, results) => {
+  // Query to check if the student exists regardless of their status
+  const studentQuery = "SELECT * FROM students WHERE StudentID = ?";
+  const teacherQuery = "SELECT * FROM teachers WHERE TeacherID = ?";
+  const adminQuery = "SELECT * FROM admins WHERE AdminID = ?";
+
+  connection.query(studentQuery, [studentID], async (error, results) => {
     if (error) {
-      return res.status(500).json({ error: "Database error" });
+      return res.status(500).json({ error: "เกิดข้อผิดพลาดในระบบฐานข้อมูล" });
     }
 
-    if (results.length === 0) {
-      return res.status(401).json({ error: "Invalid StudentID or Password" });
+    if (results.length > 0) {
+      const student = results[0];
+
+      // Check if the student's status is not 'กำลังศึกษา' or 'ออกจากการศึกษา'
+      if (student.StudentStatus === 'รอการอนุมัติ') {
+        return res.status(403).json({ error: "บัญชีของคุณกำลังรอการอนุมัติ" });
+      }
+
+      if (student.StudentStatus !== 'กำลังศึกษา' && student.StudentStatus !== 'ออกจากการศึกษา') {
+        return res.status(403).json({ error: `สถานะของคุณคือ ${student.StudentStatus}` });
+      }
+
+      // Validate the password
+      const validPassword = await bcrypt.compare(password, student.PasswordHash);
+      if (validPassword) {
+        const token = jwt.sign({ id: student.StudentID, type: 'student' }, secretKey, { expiresIn: "1h" });
+        return res.json({ token, userType: "student", userID: student.StudentID, user: student });
+      } else {
+        return res.status(401).json({ error: "รหัสผ่านไม่ถูกต้อง" });
+      }
     }
 
-    const student = results[0];
+    // If no student matches, check for teacher credentials
+    connection.query(teacherQuery, [studentID], async (error, results) => {
+      if (error) {
+        return res.status(500).json({ error: "เกิดข้อผิดพลาดในระบบฐานข้อมูล" });
+      }
 
-    // Compare the provided password with the stored hashed password
-    const validPassword = await bcrypt.compare(password, student.PasswordHash);
+      if (results.length > 0) {
+        const teacher = results[0];
+        const validPassword = await bcrypt.compare(password, teacher.PasswordHash);
+        if (validPassword) {
+          const token = jwt.sign({ id: teacher.TeacherID, type: 'teacher' }, secretKey, { expiresIn: "1h" });
+          return res.json({ token, userType: "teacher", userID: teacher.TeacherID, user: teacher });
+        } else {
+          return res.status(401).json({ error: "รหัสผ่านไม่ถูกต้อง" });
+        }
+      }
 
-    if (!validPassword) {
-      return res.status(401).json({ error: "Invalid StudentID or Password" });
-    }
+      // If no teacher matches, check for admin credentials
+      connection.query(adminQuery, [studentID], async (error, results) => {
+        if (error) {
+          return res.status(500).json({ error: "เกิดข้อผิดพลาดในระบบฐานข้อมูล" });
+        }
 
-    // Create a token with the student's ID and a 1-hour expiration time
-    const token = jwt.sign({ id: student.StudentID }, secretKey, {
-      expiresIn: "1h",
+        if (results.length > 0) {
+          const admin = results[0];
+          const validPassword = await bcrypt.compare(password, admin.PasswordHash);
+          if (validPassword) {
+            const token = jwt.sign({ id: admin.AdminID, type: 'admin' }, secretKey, { expiresIn: "1h" });
+            return res.json({ token, userType: "admin", userID: admin.AdminID, user: admin });
+          } else {
+            return res.status(401).json({ error: "รหัสผ่านไม่ถูกต้อง" });
+          }
+        }
+
+        // If no match is found in any table
+        return res.status(401).json({ error: "รหัสนักศึกษาหรือรหัสผ่านไม่ถูกต้อง" });
+      });
     });
-
-    // Return the token and the student information
-    res.json({ token, student });
   });
 });
+
 
 // Register endpoint
 app.post("/api/register", async (req, res) => {
@@ -168,6 +207,7 @@ app.post("/api/register", async (req, res) => {
       faculty,
       department,
       licensePlate,
+      teacherID, // Add the TeacherID field
     } = req.body;
 
     // Check if passwords match
@@ -182,7 +222,7 @@ app.post("/api/register", async (req, res) => {
 
     // Insert into the database
     const query =
-      "INSERT INTO students (StudentID, FirstName, LastName, PasswordHash, FacultyID, DepartmentID, LicensePlate) VALUES (?, ?, ?, ?, ?, ?, ?)";
+      "INSERT INTO students (StudentID, FirstName, LastName, PasswordHash, FacultyID, DepartmentID, LicensePlate, TeacherID) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     const params = [
       studentID,
       firstName,
@@ -191,6 +231,7 @@ app.post("/api/register", async (req, res) => {
       faculty,
       department,
       licensePlate,
+      teacherID, // Add the TeacherID to the query
     ];
 
     connection.query(query, params, (error) => {
@@ -249,80 +290,113 @@ app.get('/api/user/statistics', (req, res) => {
   });
 });
 
-// Endpoint to get statistics data
+// Endpoint to get statistics data based on the selected date
 app.get("/api/statistics", (req, res) => {
-  // Replace these queries with your actual database queries to get the data
-  const todayQuery =
-    "SELECT COUNT(*) AS count FROM helmetdetection WHERE DATE(DetectionTime) = CURDATE()";
-  const thisMonthQuery =
-    "SELECT COUNT(*) AS count FROM helmetdetection WHERE MONTH(DetectionTime) = MONTH(CURDATE()) AND YEAR(DetectionTime) = YEAR(CURDATE())";
-  const allTimeQuery = "SELECT COUNT(*) AS count FROM helmetdetection";
+  const selectedDate = req.query.date;
+
+  // Ensure a date is provided
+  if (!selectedDate) {
+    return res.status(400).json({ error: "กรุณาระบุวันที่" });
+  }
+
+  // Queries adjusted to fetch data based on the selected date
+  const dayQuery = `
+    SELECT COUNT(*) AS count
+    FROM helmetdetection
+    WHERE DATE(DetectionTime) = ?`;
+  
+  const monthQuery = `
+    SELECT COUNT(*) AS count
+    FROM helmetdetection
+    WHERE MONTH(DetectionTime) = MONTH(?) AND YEAR(DetectionTime) = YEAR(?)`;
+
+  const yearQuery = `
+    SELECT COUNT(*) AS count
+    FROM helmetdetection
+    WHERE YEAR(DetectionTime) = YEAR(?)`;
+
   const monthlyDataQuery = `
     SELECT MONTH(DetectionTime) AS month, COUNT(*) AS count
     FROM helmetdetection
-    WHERE YEAR(DetectionTime) = YEAR(CURDATE())
+    WHERE YEAR(DetectionTime) = YEAR(?)
     GROUP BY MONTH(DetectionTime)
-    ORDER BY MONTH(DetectionTime)
-  `;
+    ORDER BY MONTH(DetectionTime)`;
 
-  connection.query(todayQuery, (todayError, todayResults) => {
-    if (todayError) {
-      return res.status(500).json({ error: "Error fetching today's data" });
+  connection.query(dayQuery, [selectedDate], (dayError, dayResults) => {
+    if (dayError) {
+      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลรายวัน" });
     }
 
-    connection.query(thisMonthQuery, (thisMonthError, thisMonthResults) => {
-      if (thisMonthError) {
-        return res
-          .status(500)
-          .json({ error: "Error fetching this month's data" });
+    connection.query(monthQuery, [selectedDate, selectedDate], (monthError, monthResults) => {
+      if (monthError) {
+        return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลรายเดือน" });
       }
 
-      connection.query(allTimeQuery, (allTimeError, allTimeResults) => {
-        if (allTimeError) {
-          return res
-            .status(500)
-            .json({ error: "Error fetching all-time data" });
+      connection.query(yearQuery, [selectedDate], (yearError, yearResults) => {
+        if (yearError) {
+          return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลรายปี" });
         }
 
-        connection.query(
-          monthlyDataQuery,
-          (monthlyDataError, monthlyDataResults) => {
-            if (monthlyDataError) {
-              return res
-                .status(500)
-                .json({ error: "Error fetching monthly data" });
-            }
-
-            const months = [];
-            const counts = [];
-            monthlyDataResults.forEach((row) => {
-              months.push(row.month);
-              counts.push(row.count);
-            });
-
-            res.json({
-              today: todayResults[0].count,
-              thisMonth: thisMonthResults[0].count,
-              allTime: allTimeResults[0].count,
-              monthlyData: {
-                labels: months.map((month) => `เดือน ${month}`),
-                datasets: [
-                  {
-                    label: "จำนวนการตรวจจับรายเดือน",
-                    data: counts,
-                    borderColor: "rgba(75, 192, 192, 1)",
-                    backgroundColor: "rgba(75, 192, 192, 0.2)",
-                    borderWidth: 1,
-                  },
-                ],
-              },
-            });
+        connection.query(monthlyDataQuery, [selectedDate], (monthlyDataError, monthlyDataResults) => {
+          if (monthlyDataError) {
+            return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลรายเดือน" });
           }
-        );
+
+          // Prepare monthly data for the chart
+          const months = [];
+          const counts = [];
+          monthlyDataResults.forEach((row) => {
+            months.push(row.month);
+            counts.push(row.count);
+          });
+
+          // Respond with the collected data
+          res.json({
+            today: dayResults[0].count,
+            thisMonth: monthResults[0].count,
+            allTime: yearResults[0].count,
+            monthlyData: {
+              labels: months.map((month) => `เดือน ${month}`),
+              datasets: [
+                {
+                  label: "จำนวนการตรวจจับรายเดือน",
+                  data: counts,
+                  borderColor: "rgba(75, 192, 192, 1)",
+                  backgroundColor: "rgba(75, 192, 192, 0.2)",
+                  borderWidth: 1,
+                },
+              ],
+            },
+          });
+        });
       });
     });
   });
 });
+
+// Endpoint to get detection data for admin based on the selected date
+app.get("/api/admin/detections", (req, res) => {
+  const selectedDate = req.query.date;
+
+  // Ensure a date is provided
+  if (!selectedDate) {
+    return res.status(400).json({ error: "กรุณาระบุวันที่" });
+  }
+
+  // Query to fetch detections based on the selected date
+  const detectionsQuery = `
+    SELECT *
+    FROM helmetdetection
+    WHERE DATE(DetectionTime) = ?`;
+
+  connection.query(detectionsQuery, [selectedDate], (error, results) => {
+    if (error) {
+      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลการตรวจจับ" });
+    }
+    res.json(results);
+  });
+});
+
 
 app.get('/api/user/detections', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -381,7 +455,6 @@ app.get("/api/user/profile", verifyToken, (req, res) => {
     res.json(results[0]);
   });
 });
-
 
 // Endpoint to update user profile data (except StudentID)
 app.put("/api/user/profile", verifyToken, (req, res) => {
@@ -461,19 +534,21 @@ app.get('/api/student/:id/detections', (req, res) => {
   });
 });
 
-// Example backend code to update student status
+// Endpoint to update student status
 app.put('/api/student/:id/status', (req, res) => {
   const studentId = req.params.id;
   const { status } = req.body;
 
+  // Query to update the student status in the database
   const query = 'UPDATE students SET StudentStatus = ? WHERE StudentID = ?';
   connection.query(query, [status, studentId], (error) => {
     if (error) {
-      return res.status(500).json({ error: 'Error updating student status' });
+      return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการปรับปรุงสถานะนักศึกษา' });
     }
-    res.json({ message: 'Status updated successfully' });
+    res.json({ message: 'ปรับปรุงสถานะสำเร็จ' });
   });
 });
+
 
 // Endpoint to update a user's role
 app.put("/api/users/:id/role", (req, res) => {
@@ -496,34 +571,95 @@ app.put("/api/users/:id/role", (req, res) => {
   });
 });
 
-
-
 // Endpoint to get student data
-app.get("/api/Adminstudents", (req, res) => {
+// app.get("/api/Adminstudents", (req, res) => {
+//   const { facultyID, departmentID } = req.query;
+
+//   let query = "SELECT * FROM students";
+//   let params = [];
+
+//   // Add additional conditions based on query parameters
+//   if (facultyID || departmentID) {
+//     query += " WHERE";
+//     if (facultyID) {
+//       query += " FacultyID = ?";
+//       params.push(parseInt(facultyID));
+//     }
+//     if (departmentID) {
+//       if (params.length > 0) query += " AND";
+//       query += " DepartmentID = ?";
+//       params.push(parseInt(departmentID));
+//     }
+//   }
+
+//   connection.query(query, params, (error, results) => {
+//     if (error) {
+//       console.error("Database error:", error);
+//       return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+//     }
+//     res.json(results);
+//   });
+// });
+
+// Endpoint to get all teachers
+app.get("/api/teachers", (req, res) => {
   const { facultyID, departmentID } = req.query;
 
-  let query = "SELECT * FROM students";
+  let query = "SELECT * FROM teachers WHERE 1=1";
   let params = [];
 
-  // Add additional conditions based on query parameters
-  if (facultyID || departmentID) {
-    query += " WHERE";
-    if (facultyID) {
-      query += " FacultyID = ?";
-      params.push(parseInt(facultyID));
-    }
-    if (departmentID) {
-      if (params.length > 0) query += " AND";
-      query += " DepartmentID = ?";
-      params.push(parseInt(departmentID));
-    }
+  if (facultyID) {
+    query += " AND FacultyID = ?";
+    params.push(facultyID);
+  }
+
+  if (departmentID) {
+    query += " AND DepartmentID = ?";
+    params.push(departmentID);
   }
 
   connection.query(query, params, (error, results) => {
     if (error) {
       console.error("Database error:", error);
-      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลอาจารย์" });
     }
+    res.json(results);
+  });
+});
+
+// Endpoint to approve a student by changing their status
+app.put("/api/students/:studentID/approve", (req, res) => {
+  const { studentID } = req.params;
+
+  // Update the student's status to 'กำลังศึกษา'
+  const query = "UPDATE students SET StudentStatus = 'กำลังศึกษา' WHERE StudentID = ? AND StudentStatus = 'รอการอนุมัติ'";
+  
+  connection.query(query, [studentID], (error, results) => {
+    if (error) {
+      console.error("Database error:", error);
+      return res.status(500).json({ error: "Error updating student status" });
+    }
+
+    // Check if any row was affected
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: "Student not found or already approved" });
+    }
+
+    res.json({ message: "Student status updated to 'กำลังศึกษา'" });
+  });
+});
+
+// Endpoint to get students with a status of 'รอการอนุมัติ'
+app.get("/api/pendingRegistrations", (req, res) => {
+  // Query to fetch students with a status of 'รอการอนุมัติ'
+  const query = "SELECT * FROM students WHERE StudentStatus = 'รอการอนุมัติ'";
+
+  connection.query(query, (error, results) => {
+    if (error) {
+      console.error("Database error:", error);
+      return res.status(500).json({ error: "Error fetching pending registrations" });
+    }
+
     res.json(results);
   });
 });

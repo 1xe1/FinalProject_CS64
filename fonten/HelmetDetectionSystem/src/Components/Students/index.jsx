@@ -3,97 +3,47 @@ import { Link } from "react-router-dom";
 
 const Students = () => {
   const [students, setStudents] = useState([]);
-  const [faculties, setFaculties] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [filteredDepartments, setFilteredDepartments] = useState([]);
-  const [selectedFaculty, setSelectedFaculty] = useState("");
-  const [selectedDepartment, setSelectedDepartment] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const itemsPerPage = 6;
 
+  // Retrieve the teacherID from localStorage
+  const teacherID = localStorage.getItem("userID"); // Make sure this is stored as 'userID' in login
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      fetch("http://localhost:3000/api/students").then((response) =>
-        response.json()
-      ),
-      fetch("http://localhost:3000/api/faculties").then((response) =>
-        response.json()
-      ),
-      fetch("http://localhost:3000/api/departments").then((response) =>
-        response.json()
-      ),
-    ])
-      .then(([studentsData, facultiesData, departmentsData]) => {
+
+    // Fetch students associated with the logged-in teacher
+    const fetchData = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/students?teacherID=${teacherID}`
+        );
+
+        const studentsData = await response.json();
         setStudents(studentsData);
-        setFaculties(facultiesData);
-        setDepartments(departmentsData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false)); // Handle any errors in fetching data
-  }, []);
+      }
+    };
 
-  const filterDepartmentsByFaculty = (facultyID) => {
-    if (facultyID) {
-      const filtered = departments.filter(
-        (department) => department.FacultyID === parseInt(facultyID)
-      );
-      setFilteredDepartments(filtered);
-    } else {
-      setFilteredDepartments(departments);
-    }
-  };
-
-  const handleFacultyChange = (e) => {
-    const facultyID = e.target.value;
-    setSelectedFaculty(facultyID);
-    filterDepartmentsByFaculty(facultyID);
-    setSelectedDepartment(""); // Reset department selection on faculty change
-  };
+    fetchData();
+  }, [teacherID]);
 
   const filteredStudents = useMemo(() => {
-    return students
-      .filter(
-        (student) =>
-          (selectedFaculty
-            ? student.FacultyID === parseInt(selectedFaculty)
-            : true) &&
-          (selectedDepartment
-            ? student.DepartmentID === parseInt(selectedDepartment)
-            : true) &&
-          (searchQuery
-            ? student.FirstName.toLowerCase().includes(
-                searchQuery.toLowerCase()
-              ) ||
-              student.LastName.toLowerCase().includes(
-                searchQuery.toLowerCase()
-              ) ||
-              student.StudentStatus.toLowerCase().includes(
-                searchQuery.toLowerCase()
-              ) ||
-              student.StudentID.toString().includes(searchQuery)
-            : true)
-      )
-      .map((student) => ({
-        ...student,
-        facultyName:
-          faculties.find((faculty) => faculty.FacultyID === student.FacultyID)
-            ?.FacultyName || "ไม่ระบุ",
-        departmentName:
-          departments.find(
-            (department) => department.DepartmentID === student.DepartmentID
-          )?.DepartmentName || "ไม่ระบุ",
-      }));
-  }, [
-    students,
-    selectedFaculty,
-    selectedDepartment,
-    searchQuery,
-    faculties,
-    departments,
-  ]);
+    return students.filter(
+      (student) =>
+        searchQuery
+          ? student.FirstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            student.LastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            student.StudentStatus.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            student.StudentID.toString().includes(searchQuery)
+          : true
+    );
+  }, [students, searchQuery]);
 
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
   const paginatedStudents = filteredStudents.slice(
@@ -112,58 +62,17 @@ const Students = () => {
           ข้อมูลนักศึกษา
         </h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-2">
-              ค้นหา:
-            </label>
-            <input
-              type="text"
-              className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="ค้นหา"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-2">
-              คณะ:
-            </label>
-            <select
-              className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-              value={selectedFaculty}
-              onChange={handleFacultyChange}
-            >
-              <option value="">ทั้งหมด</option>
-              {faculties.map((faculty) => (
-                <option key={faculty.FacultyID} value={faculty.FacultyID}>
-                  {faculty.FacultyName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-2">
-              สาขาวิชา:
-            </label>
-            <select
-              className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-            >
-              <option value="">ทั้งหมด</option>
-              {filteredDepartments.map((department) => (
-                <option
-                  key={department.DepartmentID}
-                  value={department.DepartmentID}
-                >
-                  {department.DepartmentName}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-gray-600 mb-2">
+            ค้นหา:
+          </label>
+          <input
+            type="text"
+            className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            placeholder="ค้นหา"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </div>
 
@@ -195,20 +104,6 @@ const Students = () => {
                     to={`/students/${student.StudentID}`}
                     className="flex items-center justify-center bg-transparent border border-blue-500 text-blue-500 px-4 py-2 rounded-full hover:bg-blue-500 hover:text-white hover:shadow-lg transition duration-300"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      className="w-5 h-5 mr-2"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M15 12H9m4 8H7a2 2 0 01-2-2V8a2 2 0 012-2h8l4 4v8a2 2 0 01-2 2z"
-                      />
-                    </svg>
                     ดูรายละเอียด
                   </Link>
                 </td>

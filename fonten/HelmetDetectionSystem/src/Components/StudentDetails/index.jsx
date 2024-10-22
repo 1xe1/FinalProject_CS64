@@ -37,12 +37,12 @@ const StudentDetails = () => {
           setFilteredDetections(detectionsData);
           setNewStatus(studentData.student.StudentStatus);
         } else {
-          setError("Failed to fetch student data");
-          toast.error("Failed to fetch student data");
+          setError("ไม่สามารถดึงข้อมูลนักศึกษาได้");
+          toast.error("ไม่สามารถดึงข้อมูลนักศึกษาได้");
         }
       } catch (error) {
-        setError("Error fetching student data");
-        toast.error("Error fetching student data");
+        setError("เกิดข้อผิดพลาดในการดึงข้อมูลนักศึกษา");
+        toast.error("เกิดข้อผิดพลาดในการดึงข้อมูลนักศึกษา");
       } finally {
         setLoading(false);
       }
@@ -72,14 +72,14 @@ const StudentDetails = () => {
       if (response.ok) {
         setStudent({ ...student, StudentStatus: newStatus });
         setIsEditing(false);
-        toast.success("Status updated successfully!");
+        toast.success("ปรับปรุงสถานะสำเร็จ");
       } else {
-        setError("Failed to update student status");
-        toast.error("Failed to update student status");
+        setError("ไม่สามารถปรับปรุงสถานะนักศึกษาได้");
+        toast.error("ไม่สามารถปรับปรุงสถานะนักศึกษาได้");
       }
     } catch (error) {
-      setError("Error updating student status");
-      toast.error("Error updating student status");
+      setError("เกิดข้อผิดพลาดในการปรับปรุงสถานะนักศึกษา");
+      toast.error("เกิดข้อผิดพลาดในการปรับปรุงสถานะนักศึกษา");
     } finally {
       setShowConfirmation(false);
     }
@@ -125,7 +125,7 @@ const StudentDetails = () => {
   };
 
   if (loading) {
-    return <div className="p-5">Loading...</div>;
+    return <div className="p-5">กำลังโหลดข้อมูล...</div>;
   }
 
   if (error) {
@@ -144,7 +144,6 @@ const StudentDetails = () => {
         </button>
       </div>
 
-      {/* Display student information */}
       <div className="w-full max-w-3xl bg-white rounded-lg shadow-xl p-8 mb-8">
         <h1 className="mb-8 text-4xl font-bold text-center text-gray-800">
           ชื่อ: {student.FirstName} {student.LastName}
@@ -201,7 +200,6 @@ const StudentDetails = () => {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
       {showConfirmation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded-lg shadow-lg text-center w-80">
@@ -225,7 +223,6 @@ const StudentDetails = () => {
         </div>
       )}
 
-      {/* Student Detection Statistics */}
       <h1 className="mb-5 text-4xl text-gray-800">สถิติการตรวจจับของนักศึกษา</h1>
       <div className="flex justify-around w-full max-w-4xl mb-10">
         <button
@@ -251,7 +248,6 @@ const StudentDetails = () => {
         </button>
       </div>
 
-      {/* Detection list */}
       <h2 className="mb-4 text-3xl text-gray-800">รายการการตรวจจับ</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-4xl">
         {filteredDetections.length > 0 ? (
