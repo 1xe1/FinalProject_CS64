@@ -290,59 +290,59 @@ app.get('/api/user/statistics', (req, res) => {
   });
 });
 
-// Endpoint to get statistics data based on the selected date
+
+// Endpoint to get statistics data
 app.get("/api/statistics", (req, res) => {
-  const selectedDate = req.query.date;
+  // รับค่า selectedDate จาก query parameters หรือใช้วันที่ปัจจุบันเป็นค่าเริ่มต้น
+  const selectedDate = req.query.selectedDate || new Date().toISOString().slice(0, 10);
+  const selectedMonth = new Date(selectedDate).getMonth() + 1; // ดึงค่าเดือนจากวันที่ที่เลือก
+  const selectedYear = new Date(selectedDate).getFullYear(); // ดึงค่าปีจากวันที่ที่เลือก
 
-  // Ensure a date is provided
-  if (!selectedDate) {
-    return res.status(400).json({ error: "กรุณาระบุวันที่" });
-  }
-
-  // Queries adjusted to fetch data based on the selected date
-  const dayQuery = `
-    SELECT COUNT(*) AS count
-    FROM helmetdetection
-    WHERE DATE(DetectionTime) = ?`;
+  const todayQuery = `
+    SELECT COUNT(*) AS count 
+    FROM helmetdetection 
+    WHERE DATE(DetectionTime) = ?
+  `;
   
-  const monthQuery = `
-    SELECT COUNT(*) AS count
+  const thisMonthQuery = `
+    SELECT COUNT(*) AS count 
+    FROM helmetdetection 
+    WHERE MONTH(DetectionTime) = ? AND YEAR(DetectionTime) = ?
+  `;
+  
+  const allTimeQuery = `
+    SELECT COUNT(*) AS count 
     FROM helmetdetection
-    WHERE MONTH(DetectionTime) = MONTH(?) AND YEAR(DetectionTime) = YEAR(?)`;
-
-  const yearQuery = `
-    SELECT COUNT(*) AS count
-    FROM helmetdetection
-    WHERE YEAR(DetectionTime) = YEAR(?)`;
-
+  `;
+  
   const monthlyDataQuery = `
     SELECT MONTH(DetectionTime) AS month, COUNT(*) AS count
     FROM helmetdetection
-    WHERE YEAR(DetectionTime) = YEAR(?)
+    WHERE YEAR(DetectionTime) = YEAR(CURDATE())
     GROUP BY MONTH(DetectionTime)
-    ORDER BY MONTH(DetectionTime)`;
+    ORDER BY MONTH(DetectionTime)
+  `;
 
-  connection.query(dayQuery, [selectedDate], (dayError, dayResults) => {
-    if (dayError) {
-      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลรายวัน" });
+  connection.query(todayQuery, [selectedDate], (todayError, todayResults) => {
+    if (todayError) {
+      return res.status(500).json({ error: "Error fetching today's data" });
     }
 
-    connection.query(monthQuery, [selectedDate, selectedDate], (monthError, monthResults) => {
-      if (monthError) {
-        return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลรายเดือน" });
+    connection.query(thisMonthQuery, [selectedMonth, selectedYear], (thisMonthError, thisMonthResults) => {
+      if (thisMonthError) {
+        return res.status(500).json({ error: "Error fetching this month's data" });
       }
 
-      connection.query(yearQuery, [selectedDate], (yearError, yearResults) => {
-        if (yearError) {
-          return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลรายปี" });
+      connection.query(allTimeQuery, (allTimeError, allTimeResults) => {
+        if (allTimeError) {
+          return res.status(500).json({ error: "Error fetching all-time data" });
         }
 
-        connection.query(monthlyDataQuery, [selectedDate], (monthlyDataError, monthlyDataResults) => {
+        connection.query(monthlyDataQuery, (monthlyDataError, monthlyDataResults) => {
           if (monthlyDataError) {
-            return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลรายเดือน" });
+            return res.status(500).json({ error: "Error fetching monthly data" });
           }
 
-          // Prepare monthly data for the chart
           const months = [];
           const counts = [];
           monthlyDataResults.forEach((row) => {
@@ -350,11 +350,10 @@ app.get("/api/statistics", (req, res) => {
             counts.push(row.count);
           });
 
-          // Respond with the collected data
           res.json({
-            today: dayResults[0].count,
-            thisMonth: monthResults[0].count,
-            allTime: yearResults[0].count,
+            today: todayResults[0].count,
+            thisMonth: thisMonthResults[0].count,
+            allTime: allTimeResults[0].count,
             monthlyData: {
               labels: months.map((month) => `เดือน ${month}`),
               datasets: [
@@ -373,6 +372,67 @@ app.get("/api/statistics", (req, res) => {
     });
   });
 });
+
+app.get("/api/statistics/hourly", (req, res) => {
+  const selectedDate = req.query.selectedDate || new Date().toISOString().slice(0, 10); // Default to today
+  const hourlyQuery = `
+    SELECT HOUR(DetectionTime) AS hour, COUNT(*) AS count
+    FROM helmetdetection
+    WHERE DATE(DetectionTime) = ?
+    GROUP BY HOUR(DetectionTime)
+    ORDER BY HOUR(DetectionTime)
+  `;
+
+  connection.query(hourlyQuery, [selectedDate], (error, results) => {
+    if (error) {
+      return res.status(500).json({ error: "Error fetching hourly data" });
+    }
+
+    const hours = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+    const counts = Array(24).fill(0);
+
+    results.forEach((row) => {
+      counts[row.hour] = row.count;
+    });
+
+    res.json({
+      labels: hours,
+      counts: counts,
+    });
+  });
+});
+
+app.get("/api/statistics/daily", (req, res) => {
+  const selectedMonth = req.query.selectedMonth || new Date().getMonth() + 1; // Default to current month
+  const selectedYear = req.query.selectedYear || new Date().getFullYear(); // Default to current year
+
+  const dailyQuery = `
+    SELECT DAY(DetectionTime) AS day, COUNT(*) AS count
+    FROM helmetdetection
+    WHERE MONTH(DetectionTime) = ? AND YEAR(DetectionTime) = ?
+    GROUP BY DAY(DetectionTime)
+    ORDER BY DAY(DetectionTime)
+  `;
+
+  connection.query(dailyQuery, [selectedMonth, selectedYear], (error, results) => {
+    if (error) {
+      return res.status(500).json({ error: "Error fetching daily data" });
+    }
+
+    const days = [];
+    const counts = [];
+    results.forEach((row) => {
+      days.push(`วันที่ ${row.day}`);
+      counts.push(row.count);
+    });
+
+    res.json({
+      labels: days,
+      counts: counts,
+    });
+  });
+});
+
 
 // Endpoint to get detection data for admin based on the selected date
 app.get("/api/admin/detections", (req, res) => {
@@ -571,35 +631,6 @@ app.put("/api/users/:id/role", (req, res) => {
   });
 });
 
-// Endpoint to get student data
-// app.get("/api/Adminstudents", (req, res) => {
-//   const { facultyID, departmentID } = req.query;
-
-//   let query = "SELECT * FROM students";
-//   let params = [];
-
-//   // Add additional conditions based on query parameters
-//   if (facultyID || departmentID) {
-//     query += " WHERE";
-//     if (facultyID) {
-//       query += " FacultyID = ?";
-//       params.push(parseInt(facultyID));
-//     }
-//     if (departmentID) {
-//       if (params.length > 0) query += " AND";
-//       query += " DepartmentID = ?";
-//       params.push(parseInt(departmentID));
-//     }
-//   }
-
-//   connection.query(query, params, (error, results) => {
-//     if (error) {
-//       console.error("Database error:", error);
-//       return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
-//     }
-//     res.json(results);
-//   });
-// });
 
 // Endpoint to get all teachers
 app.get("/api/teachers", (req, res) => {
