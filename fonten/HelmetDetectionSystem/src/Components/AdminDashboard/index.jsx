@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Line, Bar } from 'react-chartjs-2'; // Import Bar chart component
+import { Line, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { saveAs } from 'file-saver';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { FaDownload } from 'react-icons/fa'; // Import download icon
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
 
@@ -27,9 +28,11 @@ const AdminDashboard = () => {
     datasets: []
   });
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isLoading, setIsLoading] = useState(false); // State for loading indicator
 
   const fetchStatistics = async (date) => {
     try {
+      setIsLoading(true); // Start loading
       const response = await fetch(`http://localhost:3000/api/statistics?selectedDate=${date}`);
       if (response.ok) {
         const data = await response.json();
@@ -44,11 +47,14 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching statistics:', error);
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
   const fetchHourlyData = async (date) => {
     try {
+      setIsLoading(true); // Start loading
       const response = await fetch(`http://localhost:3000/api/statistics/hourly?selectedDate=${date}`);
       if (response.ok) {
         const data = await response.json();
@@ -69,11 +75,14 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching hourly data:', error);
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
   const fetchDailyData = async (month, year) => {
     try {
+      setIsLoading(true); // Start loading
       const response = await fetch(`http://localhost:3000/api/statistics/daily?selectedMonth=${month}&selectedYear=${year}`);
       if (response.ok) {
         const data = await response.json();
@@ -94,6 +103,8 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching daily data:', error);
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
@@ -115,20 +126,30 @@ const AdminDashboard = () => {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/export/without-helmet', {
+      setIsLoading(true); // Start loading
+      const response = await fetch('http://localhost:3000/api/export/custom-format', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         },
       });
+  
       if (response.ok) {
         const blob = await response.blob();
-        saveAs(blob, 'students_without_helmet.xlsx');
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'students_without_helmet.xlsx');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
       } else {
         console.error('Failed to export data');
       }
     } catch (error) {
       console.error('Error exporting data:', error);
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
@@ -136,189 +157,82 @@ const AdminDashboard = () => {
     <div className="dashboard-container">
       <div className="p-5 bg-gray-100 min-h-screen flex flex-col items-center">
         <h1 className="mb-5 text-4xl text-gray-800">สถิติทั้งหมด</h1>
-        <div className="flex justify-around w-full max-w-4xl mb-10">
-          <div
-            className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
-            onClick={() => handlePeriodClick('today')}
-          >
-            <h2 className="mb-2 text-2xl text-blue-600">วันนี้</h2>
-            <p className="text-lg text-gray-700">จำนวน: {statistics.today}</p>
+        {isLoading ? (
+          <div className="flex justify-center items-center w-full h-64">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+            <span className="ml-4 text-lg text-gray-600">กำลังโหลดข้อมูล...</span>
           </div>
-          <div
-            className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
-            onClick={() => handlePeriodClick('thisMonth')}
-          >
-            <h2 className="mb-2 text-2xl text-blue-600">เดือนนี้</h2>
-            <p className="text-lg text-gray-700">จำนวน: {statistics.thisMonth}</p>
-          </div>
-          <div
-            className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
-            onClick={() => handlePeriodClick('allTime')}
-          >
-            <h2 className="mb-2 text-2xl text-blue-600">ทั้งหมด</h2>
-            <p className="text-lg text-gray-700">จำนวน: {statistics.allTime}</p>
-          </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex justify-around w-full max-w-4xl mb-10">
+              <div
+                className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
+                onClick={() => handlePeriodClick('today')}
+              >
+                <h2 className="mb-2 text-2xl text-blue-600">วันนี้</h2>
+                <p className="text-lg text-gray-700">จำนวน: {statistics.today}</p>
+              </div>
+              <div
+                className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
+                onClick={() => handlePeriodClick('thisMonth')}
+              >
+                <h2 className="mb-2 text-2xl text-blue-600">เดือนนี้</h2>
+                <p className="text-lg text-gray-700">จำนวน: {statistics.thisMonth}</p>
+              </div>
+              <div
+                className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
+                onClick={() => handlePeriodClick('allTime')}
+              >
+                <h2 className="mb-2 text-2xl text-blue-600">ทั้งหมด</h2>
+                <p className="text-lg text-gray-700">จำนวน: {statistics.allTime}</p>
+              </div>
+            </div>
 
-        {/* Section for Date Picker and Export Button */}
-        <div className="w-full max-w-4xl mb-10 flex justify-between items-center">
-          {/* Date Picker for selecting a date */}
-          <div className="flex-1">
-            <DatePicker
-              selected={selectedDate}
-              onChange={(date) => setSelectedDate(date)}
-              dateFormat="yyyy-MM-dd"
-              className="w-full py-2 px-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300"
-              calendarClassName="custom-datepicker"
-            />
-          </div>
+            <div className="w-full max-w-4xl mb-10 flex justify-between items-center">
+              <div className="flex-1">
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={(date) => setSelectedDate(date)}
+                  dateFormat="yyyy-MM-dd"
+                  className="w-full py-2 px-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300"
+                  calendarClassName="custom-datepicker"
+                />
+              </div>
 
-          {/* Button for Exporting Data */}
-          <button
-            onClick={handleExport}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600 transition duration-300 ml-4"
-          >
-            ดาวน์โหลดข้อมูลนักศึกษา
-          </button>
-        </div>
+              <button
+                onClick={handleExport}
+                className="px-5 py-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-lg shadow-md flex items-center gap-2 hover:scale-105 transform transition duration-300 ease-in-out hover:bg-blue-600"
+              >
+                <FaDownload />
+                <span>ดาวน์โหลดข้อมูลนักศึกษา</span>
+              </button>
+            </div>
 
-        <div className="w-full max-w-4xl mb-10">
-          <h2 className="mb-5 text-2xl text-gray-800">
-            {selectedPeriod === 'today' ? 'กราฟสถิติวันนี้ (รายชั่วโมง)' : selectedPeriod === 'thisMonth' ? 'กราฟสถิติรายวันของเดือนนี้' : 'กราฟสถิติการตรวจจับรายเดือน'}
-          </h2>
-          <div className="bg-white p-5 rounded-lg shadow-lg mb-10">
-            {selectedPeriod === 'today' ? (
-              <>
-                <div className="mb-20">
-                  <Line
-                    data={hourlyChartData}
-                    options={{
-                      responsive: true,
-                      plugins: {
-                        legend: {
-                          position: 'top',
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: function (tooltipItem) {
-                              return `จำนวน: ${tooltipItem.raw}`;
-                            },
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </div>
-                <div className="mt-20">
-                  <Bar
-                    data={hourlyChartData}
-                    options={{
-                      responsive: true,
-                      plugins: {
-                        legend: {
-                          position: 'top',
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: function (tooltipItem) {
-                              return `จำนวน: ${tooltipItem.raw}`;
-                            },
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </div>
-              </>
-            ) : selectedPeriod === 'thisMonth' ? (
-              <>
-                <div className="mb-20">
-                  <Line
-                    data={dailyChartData}
-                    options={{
-                      responsive: true,
-                      plugins: {
-                        legend: {
-                          position: 'top',
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: function (tooltipItem) {
-                              return `จำนวน: ${tooltipItem.raw}`;
-                            },
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </div>
-                <div className="mt-20">
-                  <Bar
-                    data={dailyChartData}
-                    options={{
-                      responsive: true,
-                      plugins: {
-                        legend: {
-                          position: 'top',
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: function (tooltipItem) {
-                              return `จำนวน: ${tooltipItem.raw}`;
-                            },
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="mb-20">
-                  <Line
-                    data={monthlyChartData}
-                    options={{
-                      responsive: true,
-                      plugins: {
-                        legend: {
-                          position: 'top',
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: function (tooltipItem) {
-                              return `จำนวน: ${tooltipItem.raw}`;
-                            },
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </div>
-                <div className="mt-20">
-                  <Bar
-                    data={monthlyChartData}
-                    options={{
-                      responsive: true,
-                      plugins: {
-                        legend: {
-                          position: 'top',
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: function (tooltipItem) {
-                              return `จำนวน: ${tooltipItem.raw}`;
-                            },
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+            <div className="w-full max-w-4xl mb-10">
+              <h2 className="mb-5 text-2xl text-gray-800">
+                {selectedPeriod === 'today' ? 'กราฟสถิติวันนี้ (รายชั่วโมง)' : selectedPeriod === 'thisMonth' ? 'กราฟสถิติรายวันของเดือนนี้' : 'กราฟสถิติการตรวจจับรายเดือน'}
+              </h2>
+              <div className="bg-white p-5 rounded-lg shadow-lg mb-10">
+                {selectedPeriod === 'today' ? (
+                  <>
+                    <Line data={hourlyChartData} options={{ responsive: true }} />
+                    <Bar data={hourlyChartData} options={{ responsive: true }} className="mt-10" />
+                  </>
+                ) : selectedPeriod === 'thisMonth' ? (
+                  <>
+                    <Line data={dailyChartData} options={{ responsive: true }} />
+                    <Bar data={dailyChartData} options={{ responsive: true }} className="mt-10" />
+                  </>
+                ) : (
+                  <>
+                    <Line data={monthlyChartData} options={{ responsive: true }} />
+                    <Bar data={monthlyChartData} options={{ responsive: true }} className="mt-10" />
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken"); // Import jwt for token generation
 const secretKey = "CRRU"; // Replace with a secure key
 const XLSX = require("xlsx"); // Import xlsx package
-
+const ExcelJS = require('exceljs');
 
 const app = express();
 const port = 3000;
@@ -696,47 +696,156 @@ app.get("/api/pendingRegistrations", (req, res) => {
 });
 
 // Endpoint to export student data without helmet
-app.get("/api/export/without-helmet", (req, res) => {
-  // Query to select students who were detected without a helmet
-  const query = `
-    SELECT s.StudentID, s.FirstName, s.LastName, s.LicensePlate, d.DetectionTime
-    FROM students s
-    JOIN helmetdetection d ON s.StudentID = d.StudentID
-    WHERE d.ImageURL IS NOT NULL
-    ORDER BY d.DetectionTime DESC
-  `;
+app.get("/api/export/custom-format", async (req, res) => {
+  try {
+    // Query to select all students, showing detections where available
+    const query = `
+      SELECT 
+        s.StudentID AS 'รหัสนักศึกษา',
+        s.FirstName AS 'ชื่อ',
+        s.LastName AS 'นามสกุล',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 1), 0) AS 'มกราคม',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 2), 0) AS 'กุมภาพันธ์',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 3), 0) AS 'มีนาคม',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 4), 0) AS 'เมษายน',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 5), 0) AS 'พฤษภาคม',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 6), 0) AS 'มิถุนายน',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 7), 0) AS 'กรกฎาคม',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 8), 0) AS 'สิงหาคม',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 9), 0) AS 'กันยายน',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 10), 0) AS 'ตุลาคม',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 11), 0) AS 'พฤศจิกายน',
+        IFNULL(SUM(MONTH(d.DetectionTime) = 12), 0) AS 'ธันวาคม',
+        IFNULL(COUNT(d.DetectionID), 0) AS 'ทั้งหมด'
+      FROM 
+        students s
+      LEFT JOIN 
+        helmetdetection d ON s.StudentID = d.StudentID
+      GROUP BY 
+        s.StudentID, s.FirstName, s.LastName
+      ORDER BY 
+        s.StudentID;
+    `;
 
-  connection.query(query, (error, results) => {
-    if (error) {
-      console.error("Database error:", error);
-      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
-    }
+    // Execute the query
+    connection.query(query, async (error, results) => {
+      if (error) {
+        console.error("Database error:", error);
+        return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+      }
 
-    // Create a new workbook and worksheet
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(results);
+      // Create a new workbook and worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('StudentsWithoutHelmet');
 
-    // Add the worksheet to the workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, "StudentsWithoutHelmet");
+      // Set column widths
+      worksheet.columns = [
+        { header: 'รหัสนักศึกษา', key: 'studentId', width: 15 },
+        { header: 'ชื่อ', key: 'firstName', width: 20 },
+        { header: 'นามสกุล', key: 'lastName', width: 20 },
+        { header: 'มกราคม', key: 'jan', width: 15 },
+        { header: 'กุมภาพันธ์', key: 'feb', width: 15 },
+        { header: 'มีนาคม', key: 'mar', width: 15 },
+        { header: 'เมษายน', key: 'apr', width: 15 },
+        { header: 'พฤษภาคม', key: 'may', width: 15 },
+        { header: 'มิถุนายน', key: 'jun', width: 15 },
+        { header: 'กรกฎาคม', key: 'jul', width: 15 },
+        { header: 'สิงหาคม', key: 'aug', width: 15 },
+        { header: 'กันยายน', key: 'sep', width: 15 },
+        { header: 'ตุลาคม', key: 'oct', width: 15 },
+        { header: 'พฤศจิกายน', key: 'nov', width: 15 },
+        { header: 'ธันวาคม', key: 'dec', width: 15 },
+        { header: 'ทั้งหมด', key: 'total', width: 10 }
+      ];
 
-    // Write the workbook to a buffer
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" });
+      // Merge the cells for the first row
+      worksheet.mergeCells('A1:A2'); // รหัสนักศึกษา
+      worksheet.mergeCells('B1:B2'); // ชื่อ
+      worksheet.mergeCells('C1:C2'); // นามสกุล
+      worksheet.mergeCells('D1:O1'); // Merge cells for the months' header
+      worksheet.mergeCells('P1:P2'); // ทั้งหมด
 
-    // Set the response headers to download the Excel file
-    res.setHeader(
-      "Content-Disposition",
-      "attachment; filename=students_without_helmet.xlsx"
-    );
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
+      // Set the first row values
+      worksheet.getCell('A1').value = 'รหัสนักศึกษา';
+      worksheet.getCell('B1').value = 'ชื่อ';
+      worksheet.getCell('C1').value = 'นามสกุล';
+      worksheet.getCell('D1').value = 'เดือนที่ถูกตรวจจับไม่สวมหมวกกันน็อก';
 
-    // Send the Excel file as response
-    res.send(excelBuffer);
-  });
+      // Set the second row values for months
+      const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+      months.forEach((month, index) => {
+        worksheet.getCell(`${String.fromCharCode(68 + index)}2`).value = month; // D2 to P2
+      });
+
+      // Set styles for header rows
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber <= 2) {
+          row.eachCell((cell) => {
+            cell.font = { name: 'TH Sarabun New', bold: true, size: 16 };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' }
+            };
+          });
+        }
+      });
+
+      // Insert the data rows
+      results.forEach((result, index) => {
+        const row = worksheet.addRow({
+          studentId: result['รหัสนักศึกษา'],
+          firstName: result['ชื่อ'],
+          lastName: result['นามสกุล'],
+          jan: result['มกราคม'],
+          feb: result['กุมภาพันธ์'],
+          mar: result['มีนาคม'],
+          apr: result['เมษายน'],
+          may: result['พฤษภาคม'],
+          jun: result['มิถุนายน'],
+          jul: result['กรกฎาคม'],
+          aug: result['สิงหาคม'],
+          sep: result['กันยายน'],
+          oct: result['ตุลาคม'],
+          nov: result['พฤศจิกายน'],
+          dec: result['ธันวาคม'],
+          total: result['ทั้งหมด']
+        });
+
+        // Set font style for each cell in the data rows
+        row.eachCell((cell) => {
+          cell.font = { name: 'TH Sarabun New', size: 16 };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+      });
+
+      // Generate a buffer for the workbook and send it as a response
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=students_without_helmet.xlsx"
+      );
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+
+      res.send(buffer);
+    });
+  } catch (error) {
+    console.error("Error generating Excel file:", error);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการสร้างไฟล์ Excel" });
+  }
 });
-
 
 // Start the server
 app.listen(port, () => {
