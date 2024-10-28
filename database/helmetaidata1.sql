@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 26, 2024 at 01:06 PM
+-- Generation Time: Oct 28, 2024 at 11:23 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -84,9 +84,9 @@ CREATE TABLE `faculties` (
 --
 
 INSERT INTO `faculties` (`FacultyID`, `FacultyName`) VALUES
-(1, 'คณะวิศวกรรมศาสตร์'),
-(2, 'คณะบริหารธุรกิจ'),
-(3, 'คณะเกษตรศาสตร์'),
+(1, 'วิศวกรรมศาสตร์'),
+(2, 'บริหารธุรกิจ'),
+(3, 'เกษตรศาสตร์'),
 (4, 'เทคโนโลยีคอมพิวเตอร์');
 
 -- --------------------------------------------------------

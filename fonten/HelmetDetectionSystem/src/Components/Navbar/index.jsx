@@ -82,6 +82,18 @@ const Navbar = () => {
           {userType === "admin" && (
             <div className="pl-5">
               <Link
+                to="/TeachersList"
+                className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
+              >
+                <Icon icon="mdi:account-check" className="text-2xl mr-2" />{" "}
+                {/* เปลี่ยนไอคอนที่นี่ */}
+                อาจารย์
+              </Link>
+            </div>
+          )}
+          {userType === "admin" && (
+            <div className="pl-5">
+              <Link
                 to="/AdminDashboard"
                 className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
               >

@@ -13,6 +13,7 @@ import UserProfile from "./Components/UserProfile";
 import Unauthorized from "./Components/Unauthorized";
 import StudentDetails from "./Components/StudentDetails";
 import ApproveUserRegistrations from "./Components/ApproveUserRegistrations";
+import TeachersList from "./Components/TeachersList";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -54,6 +55,10 @@ function App() {
               <Route
                 path="/ApproveUserRegistrations"
                 element={<PrivateRoute element={<ApproveUserRegistrations />} requiredRole="admin" />}
+              />
+              <Route
+                path="/TeachersList"
+                element={<PrivateRoute element={<TeachersList />} requiredRole="admin" />}
               />
               <Route path="/Register" element={<Register />} />
               <Route path="/Unauthorized" element={<Unauthorized />} />

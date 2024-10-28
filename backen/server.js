@@ -847,6 +847,33 @@ app.get("/api/export/custom-format", async (req, res) => {
   }
 });
 
+
+// เส้นทางสำหรับดึงข้อมูลอาจารย์ทั้งหมด
+app.get("/api/Adminteachers", async (req, res) => {
+  try {
+    // ใช้การเชื่อมต่อฐานข้อมูลเพื่อดึงข้อมูลอาจารย์ทั้งหมด
+    const query = `
+      SELECT teachers.TeacherID, teachers.FirstName, teachers.LastName, teachers.Email,
+             faculties.FacultyName AS Faculty, departments.DepartmentName AS Department
+      FROM teachers
+      LEFT JOIN faculties ON teachers.FacultyID = faculties.FacultyID
+      LEFT JOIN departments ON teachers.DepartmentID = departments.DepartmentID
+    `;
+    
+    // เรียกใช้คำสั่ง SQL ผ่านการเชื่อมต่อฐานข้อมูล
+    connection.query(query, (error, results) => {
+      if (error) {
+        console.error("Error fetching teachers data:", error);
+        return res.status(500).json({ error: "ไม่สามารถดึงข้อมูลอาจารย์ได้" });
+      }
+      res.json(results);
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลอาจารย์" });
+  }
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
