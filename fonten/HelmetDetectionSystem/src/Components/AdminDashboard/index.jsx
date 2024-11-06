@@ -1,12 +1,32 @@
-import React, { useEffect, useState } from 'react';
-import { Line, Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { saveAs } from 'file-saver';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import { FaDownload } from 'react-icons/fa'; // Import download icon
+import React, { useEffect, useState } from "react";
+import { Line, Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { saveAs } from "file-saver";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import "./datepicker-custom.css";
+import { FaDownload } from "react-icons/fa"; // Import download icon
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const AdminDashboard = () => {
   const [statistics, setStatistics] = useState({
@@ -14,18 +34,18 @@ const AdminDashboard = () => {
     thisMonth: 0,
     allTime: 0,
   });
-  const [selectedPeriod, setSelectedPeriod] = useState('today');
+  const [selectedPeriod, setSelectedPeriod] = useState("today");
   const [monthlyChartData, setMonthlyChartData] = useState({
     labels: [],
-    datasets: []
+    datasets: [],
   });
   const [hourlyChartData, setHourlyChartData] = useState({
     labels: [],
-    datasets: []
+    datasets: [],
   });
   const [dailyChartData, setDailyChartData] = useState({
     labels: [],
-    datasets: []
+    datasets: [],
   });
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false); // State for loading indicator
@@ -33,7 +53,9 @@ const AdminDashboard = () => {
   const fetchStatistics = async (date) => {
     try {
       setIsLoading(true); // Start loading
-      const response = await fetch(`http://localhost:3000/api/statistics?selectedDate=${date}`);
+      const response = await fetch(
+        `http://localhost:3000/api/statistics?selectedDate=${date}`
+      );
       if (response.ok) {
         const data = await response.json();
         setStatistics({
@@ -43,10 +65,10 @@ const AdminDashboard = () => {
         });
         setMonthlyChartData(data.monthlyData);
       } else {
-        console.error('Failed to fetch statistics');
+        console.error("Failed to fetch statistics");
       }
     } catch (error) {
-      console.error('Error fetching statistics:', error);
+      console.error("Error fetching statistics:", error);
     } finally {
       setIsLoading(false); // Stop loading
     }
@@ -55,7 +77,9 @@ const AdminDashboard = () => {
   const fetchHourlyData = async (date) => {
     try {
       setIsLoading(true); // Start loading
-      const response = await fetch(`http://localhost:3000/api/statistics/hourly?selectedDate=${date}`);
+      const response = await fetch(
+        `http://localhost:3000/api/statistics/hourly?selectedDate=${date}`
+      );
       if (response.ok) {
         const data = await response.json();
         setHourlyChartData({
@@ -71,10 +95,10 @@ const AdminDashboard = () => {
           ],
         });
       } else {
-        console.error('Failed to fetch hourly data');
+        console.error("Failed to fetch hourly data");
       }
     } catch (error) {
-      console.error('Error fetching hourly data:', error);
+      console.error("Error fetching hourly data:", error);
     } finally {
       setIsLoading(false); // Stop loading
     }
@@ -83,7 +107,9 @@ const AdminDashboard = () => {
   const fetchDailyData = async (month, year) => {
     try {
       setIsLoading(true); // Start loading
-      const response = await fetch(`http://localhost:3000/api/statistics/daily?selectedMonth=${month}&selectedYear=${year}`);
+      const response = await fetch(
+        `http://localhost:3000/api/statistics/daily?selectedMonth=${month}&selectedYear=${year}`
+      );
       if (response.ok) {
         const data = await response.json();
         setDailyChartData({
@@ -99,10 +125,10 @@ const AdminDashboard = () => {
           ],
         });
       } else {
-        console.error('Failed to fetch daily data');
+        console.error("Failed to fetch daily data");
       }
     } catch (error) {
-      console.error('Error fetching daily data:', error);
+      console.error("Error fetching daily data:", error);
     } finally {
       setIsLoading(false); // Stop loading
     }
@@ -117,9 +143,9 @@ const AdminDashboard = () => {
   const handlePeriodClick = (period) => {
     setSelectedPeriod(period);
     const formattedDate = selectedDate.toISOString().slice(0, 10);
-    if (period === 'today') {
+    if (period === "today") {
       fetchHourlyData(formattedDate);
-    } else if (period === 'thisMonth') {
+    } else if (period === "thisMonth") {
       fetchDailyData(selectedDate.getMonth() + 1, selectedDate.getFullYear());
     }
   };
@@ -127,27 +153,31 @@ const AdminDashboard = () => {
   const handleExport = async () => {
     try {
       setIsLoading(true); // Start loading
-      const response = await fetch('http://localhost:3000/api/export/custom-format', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        },
-      });
-  
+      const response = await fetch(
+        "http://localhost:3000/api/export/custom-format",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type":
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          },
+        }
+      );
+
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = url;
-        link.setAttribute('download', 'students_without_helmet.xlsx');
+        link.setAttribute("download", "students_without_helmet.xlsx");
         document.body.appendChild(link);
         link.click();
         link.remove();
       } else {
-        console.error('Failed to export data');
+        console.error("Failed to export data");
       }
     } catch (error) {
-      console.error('Error exporting data:', error);
+      console.error("Error exporting data:", error);
     } finally {
       setIsLoading(false); // Stop loading
     }
@@ -156,47 +186,64 @@ const AdminDashboard = () => {
   return (
     <div className="dashboard-container">
       <div className="p-5 bg-gray-100 min-h-screen flex flex-col items-center">
-        <h1 className="mb-5 text-4xl text-gray-800">สถิติทั้งหมด</h1>
+        <div className="w-full max-w-4xl bg-white shadow-md rounded-lg p-6 mb-8">
+          <h1 className="text-4xl font-bold mb-6 text-center text-gray-800">
+            สถิติทั้งหมด
+          </h1>
+        </div>
         {isLoading ? (
           <div className="flex justify-center items-center w-full h-64">
             <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
-            <span className="ml-4 text-lg text-gray-600">กำลังโหลดข้อมูล...</span>
+            <span className="ml-4 text-lg text-gray-600">
+              กำลังโหลดข้อมูล...
+            </span>
           </div>
         ) : (
           <>
             <div className="flex justify-around w-full max-w-4xl mb-10">
               <div
                 className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
-                onClick={() => handlePeriodClick('today')}
+                onClick={() => handlePeriodClick("today")}
               >
                 <h2 className="mb-2 text-2xl text-blue-600">วันนี้</h2>
-                <p className="text-lg text-gray-700">จำนวน: {statistics.today}</p>
+                <p className="text-lg text-gray-700">
+                  จำนวน: {statistics.today}
+                </p>
               </div>
               <div
                 className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
-                onClick={() => handlePeriodClick('thisMonth')}
+                onClick={() => handlePeriodClick("thisMonth")}
               >
                 <h2 className="mb-2 text-2xl text-blue-600">เดือนนี้</h2>
-                <p className="text-lg text-gray-700">จำนวน: {statistics.thisMonth}</p>
+                <p className="text-lg text-gray-700">
+                  จำนวน: {statistics.thisMonth}
+                </p>
               </div>
               <div
                 className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
-                onClick={() => handlePeriodClick('allTime')}
+                onClick={() => handlePeriodClick("allTime")}
               >
                 <h2 className="mb-2 text-2xl text-blue-600">ทั้งหมด</h2>
-                <p className="text-lg text-gray-700">จำนวน: {statistics.allTime}</p>
+                <p className="text-lg text-gray-700">
+                  จำนวน: {statistics.allTime}
+                </p>
               </div>
             </div>
 
             <div className="w-full max-w-4xl mb-10 flex justify-between items-center">
-              <div className="flex-1">
-                <DatePicker
-                  selected={selectedDate}
-                  onChange={(date) => setSelectedDate(date)}
-                  dateFormat="yyyy-MM-dd"
-                  className="w-full py-2 px-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300"
-                  calendarClassName="custom-datepicker"
-                />
+              <div className="flex-1 mr-4">
+                <div className="relative">
+                  <DatePicker
+                    selected={selectedDate}
+                    onChange={(date) => setSelectedDate(date)}
+                    dateFormat="dd/MM/yyyy"
+                    className="w-full py-3 px-4 border border-gray-300 rounded-lg shadow-sm 
+                              focus:outline-none focus:ring-2 focus:ring-blue-500 
+                              transition duration-300 text-lg bg-white
+                              hover:border-blue-400"
+                    placeholderText="เลือกวันที่"
+                  />
+                </div>
               </div>
 
               <button
@@ -210,23 +257,48 @@ const AdminDashboard = () => {
 
             <div className="w-full max-w-4xl mb-10">
               <h2 className="mb-5 text-2xl text-gray-800">
-                {selectedPeriod === 'today' ? 'กราฟสถิติวันนี้ (รายชั่วโมง)' : selectedPeriod === 'thisMonth' ? 'กราฟสถิติรายวันของเดือนนี้' : 'กราฟสถิติการตรวจจับรายเดือน'}
+                {selectedPeriod === "today"
+                  ? "กราฟสถิติวันนี้ (รายชั่วโมง)"
+                  : selectedPeriod === "thisMonth"
+                  ? "กราฟสถิติรายวันของเดือนนี้"
+                  : "กราฟสถิติการตรวจจับรายเดือน"}
               </h2>
               <div className="bg-white p-5 rounded-lg shadow-lg mb-10">
-                {selectedPeriod === 'today' ? (
+                {selectedPeriod === "today" ? (
                   <>
-                    <Line data={hourlyChartData} options={{ responsive: true }} />
-                    <Bar data={hourlyChartData} options={{ responsive: true }} className="mt-10" />
+                    <Line
+                      data={hourlyChartData}
+                      options={{ responsive: true }}
+                    />
+                    <Bar
+                      data={hourlyChartData}
+                      options={{ responsive: true }}
+                      className="mt-10"
+                    />
                   </>
-                ) : selectedPeriod === 'thisMonth' ? (
+                ) : selectedPeriod === "thisMonth" ? (
                   <>
-                    <Line data={dailyChartData} options={{ responsive: true }} />
-                    <Bar data={dailyChartData} options={{ responsive: true }} className="mt-10" />
+                    <Line
+                      data={dailyChartData}
+                      options={{ responsive: true }}
+                    />
+                    <Bar
+                      data={dailyChartData}
+                      options={{ responsive: true }}
+                      className="mt-10"
+                    />
                   </>
                 ) : (
                   <>
-                    <Line data={monthlyChartData} options={{ responsive: true }} />
-                    <Bar data={monthlyChartData} options={{ responsive: true }} className="mt-10" />
+                    <Line
+                      data={monthlyChartData}
+                      options={{ responsive: true }}
+                    />
+                    <Bar
+                      data={monthlyChartData}
+                      options={{ responsive: true }}
+                      className="mt-10"
+                    />
                   </>
                 )}
               </div>

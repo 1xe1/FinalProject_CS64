@@ -51,7 +51,7 @@ const Navbar = () => {
                 to="/UserDashboard"
                 className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
               >
-                <Icon icon="mdi:home" className="text-2xl mr-2" />
+                <Icon icon="material-symbols:dashboard" className="text-2xl mr-2" />
                 หน้าหลัก
               </Link>
             </div>
@@ -62,7 +62,7 @@ const Navbar = () => {
                 to="/Students"
                 className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
               >
-                <Icon icon="ph:user-list" className="text-2xl mr-2" />
+                <Icon icon="mdi:account-school" className="text-2xl mr-2" />
                 ข้อมูลนักศึกษา
               </Link>
             </div>
@@ -73,8 +73,7 @@ const Navbar = () => {
                 to="/ApproveUserRegistrations"
                 className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
               >
-                <Icon icon="mdi:account-check" className="text-2xl mr-2" />{" "}
-                {/* เปลี่ยนไอคอนที่นี่ */}
+                <Icon icon="mdi:account-check" className="text-2xl mr-2" />
                 อนุมัติการสมัครสมาชิก
               </Link>
             </div>
@@ -85,9 +84,19 @@ const Navbar = () => {
                 to="/TeachersList"
                 className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
               >
-                <Icon icon="mdi:account-check" className="text-2xl mr-2" />{" "}
-                {/* เปลี่ยนไอคอนที่นี่ */}
+                <Icon icon="mdi:teach" className="text-2xl mr-2" />
                 อาจารย์
+              </Link>
+            </div>
+          )}
+          {userType === "admin" && (
+            <div className="pl-5">
+              <Link
+                to="/WarningPage"
+                className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
+              >
+                <Icon icon="material-symbols:warning-outline" className="text-2xl mr-2" />
+                เฝ้าระวัง
               </Link>
             </div>
           )}
@@ -97,7 +106,7 @@ const Navbar = () => {
                 to="/AdminDashboard"
                 className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
               >
-                <Icon icon="uil:chart" className="text-2xl mr-2" />
+                <Icon icon="material-symbols:analytics-outline" className="text-2xl mr-2" />
                 รายงานสรุปสถิติ
               </Link>
             </div>
@@ -142,21 +151,38 @@ const Navbar = () => {
 
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 transition-opacity duration-300">
-          <div className="bg-white p-8 rounded-lg shadow-lg w-96 max-w-full text-center">
-            <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-              คุณต้องการออกจากระบบ ?
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/60 backdrop-blur-sm transition-all duration-300">
+          <div className="bg-white/90 p-8 rounded-2xl shadow-2xl w-[400px] max-w-full text-center transform transition-all duration-300 scale-in-center border border-gray-100">
+            <div className="mb-6 relative">
+              <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-red-500/10 rounded-full p-4">
+                <Icon 
+                  icon="material-symbols:logout" 
+                  className="text-6xl text-red-500 mx-auto animate-bounce"
+                />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold mb-3 text-gray-800 mt-8">
+              ออกจากระบบ
             </h2>
+            <p className="text-gray-600 mb-8 text-sm">
+              คุณต้องการที่จะออกจากระบบใช่หรือไม่? <br/>
+              กรุณายืนยันการออกจากระบบอีกครั้ง
+            </p>
             <div className="flex justify-center space-x-4">
               <button
                 onClick={confirmLogout}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
+                className="bg-gradient-to-r from-red-500 to-red-600 text-white px-8 py-3 rounded-xl 
+                hover:from-red-600 hover:to-red-700 transition-all duration-300 font-medium 
+                flex items-center transform hover:scale-105 hover:shadow-lg"
               >
+                <Icon icon="material-symbols:logout" className="mr-2 text-xl" />
                 ออกจากระบบ
               </button>
               <button
                 onClick={cancelLogout}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-300"
+                className="bg-white text-gray-700 px-8 py-3 rounded-xl border border-gray-200
+                hover:bg-gray-50 transition-all duration-300 font-medium
+                transform hover:scale-105 hover:shadow-lg"
               >
                 ยกเลิก
               </button>

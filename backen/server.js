@@ -6,6 +6,11 @@ const jwt = require("jsonwebtoken"); // Import jwt for token generation
 const secretKey = "CRRU"; // Replace with a secure key
 const XLSX = require("xlsx"); // Import xlsx package
 const ExcelJS = require('exceljs');
+const fs = require('fs');
+const path = require('path');
+const multer = require("multer");
+
+
 
 const app = express();
 const port = 3000;
@@ -16,30 +21,108 @@ app.use(cors());
 // Middleware for JSON body parsing
 app.use(express.json());
 
-// Endpoint to get student data filtered by teacherID and status
+
+const IMAGE_DIRECTORY = path.join(__dirname, "public/images");
+
+// Endpoint เพื่อดึงชื่อไฟล์รูปภาพทั้งหมดใน directory
+app.get("/api/warning-images", (req, res) => {
+  try {
+    // ตรวจสอบว่า directory มีอยู่จริง ถ้าไม่มีให้สร้างใหม่
+    if (!fs.existsSync(IMAGE_DIRECTORY)) {
+      fs.mkdirSync(IMAGE_DIRECTORY, { recursive: true });
+      console.log('Created directory:', IMAGE_DIRECTORY);
+    }
+
+    // อ่านรายการไฟล์ทั้งหมดใน directory
+    const files = fs.readdirSync(IMAGE_DIRECTORY);
+    
+    // กรองเฉพาะไฟล์ภาพที่ลงท้ายด้วย .jpg, .jpeg, หรือ .png
+    const imageFiles = files.filter(file => 
+      file.toLowerCase().endsWith('.jpg') || 
+      file.toLowerCase().endsWith('.jpeg') || 
+      file.toLowerCase().endsWith('.png')
+    );
+
+    // ส่งชื่อไฟล์รูปภาพออกมาเป็น array
+    console.log('Found images:', imageFiles.length);
+    res.json(imageFiles); // ส่งชื่อไฟล์ออกมาแทน URL
+
+  } catch (error) {
+    console.error("Error reading images:", error);
+    res.status(500).json({ 
+      error: "Could not retrieve images",
+      details: error.message 
+    });
+  }
+});
+
+
+// Serve static files from the "public/images" folder
+app.use("/images", express.static(path.join(__dirname, "public/images")));
+
+
+// กำหนด storage สำหรับ multer เพื่อจัดการที่จัดเก็บไฟล์และตั้งชื่อไฟล์
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, IMAGE_DIRECTORY); // บันทึกไฟล์ในโฟลเดอร์ public/images
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
+    cb(null, `${uniqueSuffix}-${file.originalname}`); // ตั้งชื่อไฟล์เป็น unique
+  },
+});
+
+const upload = multer({ storage: storage });
+
+// ตรวจสอบว่าโฟลเดอร์ IMAGE_DIRECTORY มีอยู่หรือไม่ ถ้าไม่มีก็สร้างใหม่
+if (!fs.existsSync(IMAGE_DIRECTORY)) {
+  fs.mkdirSync(IMAGE_DIRECTORY, { recursive: true });
+  console.log("Created directory:", IMAGE_DIRECTORY);
+}
+
+// Endpoint สำหรับอัปโหลดรูปภาพ
+app.post("/api/upload-image", upload.single("image"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+  res.json({
+    message: "Image uploaded successfully",
+    filename: req.file.filename,
+  });
+});
+
+// Endpoint to get student data with latest detection record by teacherID and status
 app.get("/api/students", (req, res) => {
   const { teacherID } = req.query;
 
-  // Ensure that teacherID is provided
   if (!teacherID) {
     return res.status(400).json({ error: "Teacher ID is required" });
   }
 
-  // Query to fetch students associated with the teacher and specific statuses
-  const query = "SELECT * FROM students WHERE TeacherID = ? AND StudentStatus IN ('กำลังศึกษา', 'ออกจากการศึกษา')";
+  // SQL query to fetch students and their latest detection data
+  const query = `
+    SELECT s.StudentID, s.FirstName, s.LastName, s.StudentStatus, h.DetectionTime, h.ImageURL
+    FROM students s
+    LEFT JOIN (
+      SELECT StudentID, MAX(DetectionTime) AS DetectionTime, ImageURL
+      FROM helmetdetection
+      GROUP BY StudentID
+    ) h ON s.StudentID = h.StudentID
+    WHERE s.TeacherID = ? AND s.StudentStatus IN ('กำลังศึกษา', 'ออกจากการศึกษา')
+    ORDER BY h.DetectionTime DESC
+  `;
+  
   const params = [teacherID];
-
-  console.log("Executing query:", query, "with params:", params);
-
+  
   connection.query(query, params, (error, results) => {
     if (error) {
       console.error("Database error:", error);
       return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
     }
-    console.log("Query results:", results);
     res.json(results);
   });
 });
+
 
 // Endpoint to get detailed student information
 app.get("/api/student/:id", (req, res) => {
@@ -147,7 +230,13 @@ app.post("/api/login", (req, res) => {
       const validPassword = await bcrypt.compare(password, student.PasswordHash);
       if (validPassword) {
         const token = jwt.sign({ id: student.StudentID, type: 'student' }, secretKey, { expiresIn: "1h" });
-        return res.json({ token, userType: "student", userID: student.StudentID, user: student });
+        return res.json({ 
+          token, 
+          userType: "student", 
+          userID: student.StudentID, 
+          user: student,
+          licensePlate: student.LicensePlate
+        });
       } else {
         return res.status(401).json({ error: "รหัสผ่านไม่ถูกต้อง" });
       }
@@ -181,7 +270,7 @@ app.post("/api/login", (req, res) => {
           const validPassword = await bcrypt.compare(password, admin.PasswordHash);
           if (validPassword) {
             const token = jwt.sign({ id: admin.AdminID, type: 'admin' }, secretKey, { expiresIn: "1h" });
-            return res.json({ token, userType: "admin", userID: admin.AdminID, user: admin });
+            return res.json({ token, userType: "admin", userID: admin.AdminID, user: admin});
           } else {
             return res.status(401).json({ error: "รหัสผ่านไม่ถูกต้อง" });
           }
@@ -680,20 +769,52 @@ app.put("/api/students/:studentID/approve", (req, res) => {
   });
 });
 
-// Endpoint to get students with a status of 'รอการอนุมัติ'
+// Endpoint to get students based on specific status
 app.get("/api/pendingRegistrations", (req, res) => {
-  // Query to fetch students with a status of 'รอการอนุมัติ'
-  const query = "SELECT * FROM students WHERE StudentStatus = 'รอการอนุมัติ'";
+  const { status } = req.query; // รับค่า status จาก query parameters
 
-  connection.query(query, (error, results) => {
+  // คำสั่ง SQL พื้นฐาน
+  let query = "SELECT * FROM students";
+  const params = [];
+
+  // ถ้ามีการระบุ status ให้เพิ่มเงื่อนไขการกรอง
+  if (status) {
+    query += " WHERE StudentStatus = ?";
+    params.push(status);
+  }
+
+  connection.query(query, params, (error, results) => {
     if (error) {
       console.error("Database error:", error);
-      return res.status(500).json({ error: "Error fetching pending registrations" });
+      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
     }
 
     res.json(results);
   });
 });
+
+// Endpoint to update a student's status
+app.put("/api/students/:studentID/status", (req, res) => {
+  const { studentID } = req.params;
+  const { newStatus } = req.body; // Expecting newStatus in the request body
+
+  const query = "UPDATE students SET StudentStatus = ? WHERE StudentID = ?";
+  
+  connection.query(query, [newStatus, studentID], (error, results) => {
+    if (error) {
+      console.error("Database error:", error);
+      return res.status(500).json({ error: "Error updating student status" });
+    }
+
+    // Check if any row was affected
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    res.json({ message: `Student status updated to '${newStatus}'` });
+  });
+});
+
 
 // Endpoint to export student data without helmet
 app.get("/api/export/custom-format", async (req, res) => {
@@ -848,19 +969,18 @@ app.get("/api/export/custom-format", async (req, res) => {
 });
 
 
-// เส้นทางสำหรับดึงข้อมูลอาจารย์ทั้งหมด
+// Endpoint for getting all teachers, including FacultyID and DepartmentID
 app.get("/api/Adminteachers", async (req, res) => {
   try {
-    // ใช้การเชื่อมต่อฐานข้อมูลเพื่อดึงข้อมูลอาจารย์ทั้งหมด
     const query = `
       SELECT teachers.TeacherID, teachers.FirstName, teachers.LastName, teachers.Email,
-             faculties.FacultyName AS Faculty, departments.DepartmentName AS Department
+             faculties.FacultyID, faculties.FacultyName AS Faculty, 
+             departments.DepartmentID, departments.DepartmentName AS Department
       FROM teachers
       LEFT JOIN faculties ON teachers.FacultyID = faculties.FacultyID
       LEFT JOIN departments ON teachers.DepartmentID = departments.DepartmentID
     `;
-    
-    // เรียกใช้คำสั่ง SQL ผ่านการเชื่อมต่อฐานข้อมูล
+
     connection.query(query, (error, results) => {
       if (error) {
         console.error("Error fetching teachers data:", error);
@@ -873,6 +993,127 @@ app.get("/api/Adminteachers", async (req, res) => {
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลอาจารย์" });
   }
 });
+// เพิ่มการตั้งค่าใน api/Adminteachers สำหรับ POST เพื่อเพิ่มข้อมูลอาจารย์ใหม่
+
+app.post("/api/Adminteachers", async (req, res) => {
+  const { TeacherID, FirstName, LastName, Email, Password, FacultyID, DepartmentID } = req.body;
+
+  // Check that all necessary data is provided
+  if (!TeacherID || !FirstName || !LastName || !Email || !Password || !FacultyID || !DepartmentID) {
+    return res.status(400).json({ error: "กรุณากรอกข้อมูลให้ครบทุกช่อง" });
+  }
+
+  try {
+    // Encrypt the password before saving
+    const hashedPassword = await bcrypt.hash(Password, 10);
+
+    // SQL query to insert the teacher information
+    const sql = `
+      INSERT INTO teachers (TeacherID, FirstName, LastName, Email, PasswordHash, FacultyID, DepartmentID)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    // Execute the SQL query
+    connection.query(
+      sql,
+      [TeacherID, FirstName, LastName, Email, hashedPassword, FacultyID, DepartmentID],
+      (error, results) => {
+        if (error) {
+          console.error("Error inserting teacher:", error);
+          return res.status(500).json({ error: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลอาจารย์" });
+        }
+
+        // Respond with the added teacher data
+        res.status(201).json({
+          TeacherID,
+          FirstName,
+          LastName,
+          Email,
+          FacultyID,
+          DepartmentID,
+        });
+      }
+    );
+  } catch (error) {
+    console.error("Error in adding teacher:", error);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการเพิ่มข้อมูลอาจารย์" });
+  }
+});
+
+// Update teacher information
+app.put("/api/Adminteachers/:TeacherID", async (req, res) => {
+  const { TeacherID } = req.params;
+  const { FirstName, LastName, Email, FacultyID, DepartmentID } = req.body;
+
+  // Ensure all required fields are provided
+  if (!TeacherID || !FirstName || !LastName || !Email || !FacultyID || !DepartmentID) {
+    return res.status(400).json({ error: "กรุณากรอกข้อมูลให้ครบทุกช่อง" });
+  }
+
+  try {
+    // SQL query to update the teacher's information, using FacultyID and DepartmentID directly
+    const sql = `
+      UPDATE teachers 
+      SET 
+        FirstName = ?, 
+        LastName = ?, 
+        Email = ?, 
+        FacultyID = ?, 
+        DepartmentID = ? 
+      WHERE TeacherID = ?
+    `;
+
+    // Execute the SQL update query
+    connection.query(
+      sql,
+      [FirstName, LastName, Email, FacultyID, DepartmentID, TeacherID],
+      (error, results) => {
+        if (error) {
+          console.error("Error updating teacher:", error);
+          return res.status(500).json({ error: "เกิดข้อผิดพลาดในการแก้ไขข้อมูลอาจารย์" });
+        }
+
+        if (results.affectedRows === 0) {
+          return res.status(404).json({ error: "ไม่พบอาจารย์ที่ระบุ" });
+        }
+
+        // Send the updated teacher information back in the response
+        res.json({
+          TeacherID,
+          FirstName,
+          LastName,
+          Email,
+          FacultyID,
+          DepartmentID,
+        });
+      }
+    );
+  } catch (error) {
+    console.error("Error in updating teacher:", error);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการแก้ไขข้อมูลอาจารย์" });
+  }
+});
+
+// DELETE endpoint for removing a teacher by TeacherID
+app.delete("/api/Adminteachers/:TeacherID", (req, res) => {
+  const { TeacherID } = req.params;
+
+  const sql = `DELETE FROM teachers WHERE TeacherID = ?`;
+  
+  connection.query(sql, [TeacherID], (error, results) => {
+    if (error) {
+      console.error("Error deleting teacher:", error);
+      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการลบข้อมูลอาจารย์" });
+    }
+
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: "ไม่พบอาจารย์ที่ต้องการลบ" });
+    }
+
+    res.status(200).json({ message: "ลบข้อมูลอาจารย์สำเร็จ" });
+  });
+});
+
 
 // Start the server
 app.listen(port, () => {

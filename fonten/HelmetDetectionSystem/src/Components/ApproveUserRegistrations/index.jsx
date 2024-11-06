@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { FaRegCheckSquare, FaUndo } from "react-icons/fa";
 
 const ApproveUserRegistrations = () => {
   const [users, setUsers] = useState([]);
@@ -9,13 +10,15 @@ const ApproveUserRegistrations = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("รอการอนุมัติ");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
+  const [selectedUsers, setSelectedUsers] = useState([]);
 
   useEffect(() => {
     const fetchPendingRegistrations = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/pendingRegistrations");
+        const response = await fetch(`http://localhost:3000/api/pendingRegistrations?status=${selectedStatus}`);
         if (response.ok) {
           const usersData = await response.json();
           setUsers(usersData);
@@ -32,19 +35,22 @@ const ApproveUserRegistrations = () => {
     };
 
     fetchPendingRegistrations();
-  }, []);
+  }, [selectedStatus]);
 
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
-      return (
+      const matchesSearchTerm =
         user.StudentID.toString().includes(searchTerm) ||
         user.FirstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.LastName.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    });
-  }, [users, searchTerm]);
+        user.LastName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = selectedStatus
+        ? user.StudentStatus === selectedStatus
+        : true;
 
-  // Calculate the current items to display based on pagination
+      return matchesSearchTerm && matchesStatus;
+    });
+  }, [users, searchTerm, selectedStatus]);
+
   const currentItems = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredUsers.slice(startIndex, startIndex + itemsPerPage);
@@ -59,15 +65,12 @@ const ApproveUserRegistrations = () => {
 
   const handleApproveSave = async () => {
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/students/${selectedUser.StudentID}/approve`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`http://localhost:3000/api/students/${selectedUser.StudentID}/approve`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       if (response.ok) {
         setUsers(users.filter((user) => user.StudentID !== selectedUser.StudentID));
@@ -88,6 +91,133 @@ const ApproveUserRegistrations = () => {
     setShowConfirmation(false);
   };
 
+  const handleSelectUser = (userId) => {
+    setSelectedUsers((prevSelected) =>
+      prevSelected.includes(userId)
+        ? prevSelected.filter((id) => id !== userId)
+        : [...prevSelected, userId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedUsers.length === currentItems.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(currentItems.map((user) => user.StudentID));
+    }
+  };
+
+  const handleApproveSelected = async () => {
+    try {
+      const promises = selectedUsers.map((userId) =>
+        fetch(`http://localhost:3000/api/students/${userId}/approve`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+      );
+
+      const responses = await Promise.all(promises);
+      const successfulApprovals = responses.filter((response) => response.ok);
+
+      if (successfulApprovals.length > 0) {
+        setUsers(users.filter((user) => !selectedUsers.includes(user.StudentID)));
+        toast.success("อนุมัตินักศึกษาที่เลือกเรียบร้อยแล้ว");
+      } else {
+        toast.error("เกิดข้อผิดพลาดในการอนุมัตินักศึกษาที่เลือก");
+      }
+    } catch (error) {
+      toast.error("เกิดข้อผิดพลาดในการอนุมัตินักศึกษาที่เลือก");
+      console.error("Error:", error);
+    } finally {
+      setSelectedUsers([]);
+    }
+  };
+
+  const handleChangeStatus = async (user, newStatus) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/students/${user.StudentID}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newStatus }),
+      });
+
+      if (response.ok) {
+        setUsers(users.map((u) => 
+          u.StudentID === user.StudentID ? { ...u, StudentStatus: newStatus } : u
+        ));
+        toast.success(`สถานะนักศึกษาเปลี่ยนเป็น '${newStatus}' เรียบร้อยแล้ว`);
+      } else {
+        const errorData = await response.json();
+        toast.error(`เกิดข้อผิดพลาดในการเปลี่ยนสถานะนักศึกษา: ${errorData.error}`);
+      }
+    } catch (error) {
+      toast.error("เกิดข้อผิดพลาดในการเปลี่ยนสถานะนักศึกษา");
+      console.error("Error:", error);
+    }
+  };
+
+  const handleRevertStatus = async (user) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/students/${user.StudentID}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newStatus: "รอการอนุมัติ" }),
+      });
+
+      if (response.ok) {
+        setUsers(users.map((u) => 
+          u.StudentID === user.StudentID ? { ...u, StudentStatus: "รอการอนุมัติ" } : u
+        ));
+        toast.success(`สถานะนักศึกษาเปลี่ยนเป็น 'รอการอนุมัติ' เรียบร้อยแล้ว`);
+      } else {
+        const errorData = await response.json();
+        toast.error(`เกิดข้อผิดพลาดในการเปลี่ยนสถานะนักศึกษา: ${errorData.error}`);
+      }
+    } catch (error) {
+      toast.error("เกิดข้อผิดพลาดในการเปลี่ยนสถานะนักศึกษา");
+      console.error("Error:", error);
+    }
+  };
+
+  const handleRevertSelectedStatus = async () => {
+    try {
+      const promises = selectedUsers.map((userId) =>
+        fetch(`http://localhost:3000/api/students/${userId}/status`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ newStatus: "รอการอนุมัติ" }),
+        })
+      );
+
+      const responses = await Promise.all(promises);
+      const successfulReverts = responses.filter((response) => response.ok);
+
+      if (successfulReverts.length > 0) {
+        setUsers(users.map((user) =>
+          selectedUsers.includes(user.StudentID)
+            ? { ...user, StudentStatus: "รอการอนุมัติ" }
+            : user
+        ));
+        toast.success("สถานะนักศึกษาที่เลือกเปลี่ยนเป็น 'รอการอนุมัติ' เรียบร้อยแล้ว");
+      } else {
+        toast.error("เกิดข้อผิดพลาดในการเปลี่ยนสถานะนักศึกษาที่เลือก");
+      }
+    } catch (error) {
+      toast.error("เกิดข้อผิดพลาดในการเปลี่ยนสถานะนักศึกษาที่เลือก");
+      console.error("Error:", error);
+    } finally {
+      setSelectedUsers([]);
+    }
+  };
+
   if (loading) {
     return <div className="p-5">กำลังโหลดข้อมูล...</div>;
   }
@@ -99,52 +229,112 @@ const ApproveUserRegistrations = () => {
   return (
     <div className="p-5 bg-gray-100 min-h-screen flex flex-col items-center">
       <ToastContainer />
-      <h1 className="mb-8 text-4xl font-bold text-center text-gray-800">
-        อนุมัติการสมัครสมาชิก
-      </h1>
-
-      {/* Search Filter */}
-      <div className="flex justify-between mb-6 w-full max-w-5xl">
-        <input
-          type="text"
-          placeholder="ค้นหา..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="p-3 border border-gray-300 rounded-lg shadow-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+      <div className="bg-white shadow-md rounded-lg p-6 mb-8 w-full max-w-5xl mx-auto">
+        <h1 className="text-4xl font-bold mb-6 text-center text-gray-800">
+          อนุมัติการสมัครสมาชิก
+        </h1>
       </div>
 
       <div className="w-full max-w-5xl bg-white rounded-lg shadow-xl p-8 mb-8">
+        <div className="relative flex justify-between mb-5">
+          <input
+            placeholder="ค้นหา..."
+            className="input shadow-lg focus:border-2 border-gray-300 px-5 py-3 rounded-xl w-56 transition-all focus:w-64 outline-none"
+            name="search"
+            type="search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="รอการอนุมัติ">รอการอนุมัติ</option>
+            <option value="กำลังศึกษา">กำลังศึกษา</option>
+            <option value="ออกจากการศึกษา">ออกจากการศึกษา</option>
+          </select>
+        </div>
+
         <table className="min-w-full bg-white rounded-lg overflow-hidden">
           <thead>
             <tr className="bg-gray-800 text-white">
+              <th className="py-4 px-4 text-left">
+                <input
+                  type="checkbox"
+                  checked={selectedUsers.length === currentItems.length}
+                  onChange={handleSelectAll}
+                />
+              </th>
               <th className="py-4 px-4 text-left">รหัสนักศึกษา</th>
               <th className="py-4 px-4 text-left">ชื่อ</th>
               <th className="py-4 px-4 text-left">นามสกุล</th>
-              <th className="py-4 px-4 text-left">การจัดการ</th>
+              <th className="py-4 px-4 text-left">สถานะ</th>
+              <th className="py-4 px-4 text-left">ดำเนินการ</th>
             </tr>
           </thead>
           <tbody className="text-gray-700 divide-y divide-gray-200">
             {currentItems.map((user) => (
               <tr key={user.StudentID} className="hover:bg-gray-50 transition">
+                <td className="py-4 px-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedUsers.includes(user.StudentID)}
+                    onChange={() => handleSelectUser(user.StudentID)}
+                  />
+                </td>
                 <td className="py-4 px-4">{user.StudentID}</td>
                 <td className="py-4 px-4">{user.FirstName}</td>
                 <td className="py-4 px-4">{user.LastName}</td>
+                <td className="py-4 px-4">{user.StudentStatus}</td>
                 <td className="py-4 px-4">
-                  <button
-                    onClick={() => handleApprove(user)}
-                    className="px-6 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition duration-200 ease-in-out"
-                  >
-                    อนุมัติ
-                  </button>
+                  {selectedStatus === "กำลังศึกษา" || selectedStatus === "ออกจากการศึกษา" ? (
+                    <button
+                      onClick={() => handleRevertStatus(user)}
+                      className="flex items-center px-6 py-2 bg-yellow-500 text-white rounded-full hover:bg-yellow-400 transition duration-200 ease-in-out"
+                      aria-label="เปลี่ยนสถานะเป็นรอการอนุมัติ"
+                    >
+                      <FaUndo className="mr-2" />
+                      รอการอนุมัติ
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleApprove(user)}
+                      className="flex items-center px-6 py-2 bg-green-700 text-white rounded-full hover:bg-green-600 transition duration-200 ease-in-out"
+                      aria-label="อนุมัติการสมัคร"
+                    >
+                      <FaRegCheckSquare className="mr-2" />
+                      อนุมัติ
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        <button
+          onClick={
+            selectedStatus === "กำลังศึกษา" || selectedStatus === "ออกจากการศึกษา"
+              ? handleRevertSelectedStatus
+              : handleApproveSelected
+          }
+          disabled={selectedUsers.length === 0}
+          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-500 transition duration-200 ease-in-out flex items-center justify-center"
+        >
+          {selectedStatus === "กำลังศึกษา" || selectedStatus === "ออกจากการศึกษา" ? (
+            <>
+              <FaUndo className="mr-2" />
+              แก้ไขเป็นรอการอนุมัติ
+            </>
+          ) : (
+            <>
+              <FaRegCheckSquare className="mr-2" />
+              อนุมัติทั้งหมดที่เลือก
+            </>
+          )}
+        </button>
       </div>
 
-      {/* Pagination Controls */}
       <div className="flex justify-between items-center mb-8 w-full max-w-5xl">
         <button
           onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -163,7 +353,9 @@ const ApproveUserRegistrations = () => {
         </span>
 
         <button
-          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          onClick={() =>
+            setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+          }
           disabled={currentPage === totalPages}
           className={`px-4 py-2 rounded-lg shadow ${
             currentPage === totalPages
@@ -175,7 +367,6 @@ const ApproveUserRegistrations = () => {
         </button>
       </div>
 
-      {/* Confirmation Modal */}
       {showConfirmation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded-lg shadow-lg text-center w-96">
@@ -192,7 +383,7 @@ const ApproveUserRegistrations = () => {
             <div className="flex justify-center space-x-6">
               <button
                 onClick={handleApproveSave}
-                className="px-6 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition duration-200 ease-in-out"
+                className="px-6 py-2 bg-green-700 text-white rounded-full hover:bg-green-600 transition duration-200 ease-in-out"
               >
                 ยืนยัน
               </button>

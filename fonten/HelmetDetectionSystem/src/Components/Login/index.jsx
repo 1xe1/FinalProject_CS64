@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
+import { FaUser, FaLock } from "react-icons/fa";
 
 function Login() {
   const [studentID, setStudentID] = useState("");
@@ -26,6 +27,7 @@ function Login() {
         localStorage.setItem("userID", data.userID);
         localStorage.setItem("userName", `${data.user.FirstName} ${data.user.LastName}`);
         localStorage.setItem("userType", data.userType);
+        localStorage.setItem("licensePlate", data.licensePlate);
         
         toast.success("เข้าสู่ระบบสำเร็จ!");
         setTimeout(() => {
@@ -50,43 +52,46 @@ function Login() {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-pink-500 to-blue-700">
-      <div className="bg-white p-10 w-full max-w-md rounded-lg shadow-xl text-center">
-        <h2 className="mb-6 text-2xl font-bold">ยินดีต้อนรับ</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-6">
+      <ToastContainer />
+
+      <div className="bg-white/90 backdrop-blur-sm p-8 md:p-10 w-11/12 max-w-md rounded-2xl shadow-2xl text-center transform hover:scale-[1.02] transition-all duration-300">
+        <h2 className="mb-8 text-3xl font-bold bg-gradient-to-r from-blue-600 to-pink-500 text-transparent bg-clip-text">ยินดีต้อนรับ</h2>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="relative">
+            <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="รหัสนักศึกษา"
               value={studentID}
               onChange={(e) => setStudentID(e.target.value)}
               required
-              className="w-full p-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors"
+              className="w-full p-4 pl-10 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none transition-all duration-300"
             />
           </div>
-          <div className="mb-6">
+          <div className="relative">
+            <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="password"
               placeholder="รหัสผ่าน"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full p-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors"
+              className="w-full p-4 pl-10 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none transition-all duration-300"
             />
           </div>
           <button
             type="submit"
-            className="w-4/5 p-3 bg-gradient-to-r from-blue-600 to-pink-500 text-white font-semibold rounded-lg hover:bg-gradient-to-r hover:from-pink-500 hover:to-blue-600 transition-colors"
+            className="w-full p-4 bg-gradient-to-r from-blue-600 to-pink-500 text-white font-semibold rounded-lg hover:from-pink-500 hover:to-blue-600 transform hover:scale-[1.02] transition-all duration-300 shadow-lg"
           >
             เข้าสู่ระบบ
           </button>
           <Link
             to="/Register"
-            className="block mt-6 text-blue-600 hover:underline"
+            className="block mt-6 text-blue-600 hover:text-pink-500 transition-colors duration-300 font-medium"
           >
             ลงทะเบียนเข้าสู่ระบบ
           </Link>
         </form>
-        <ToastContainer />
       </div>
     </div>
   );

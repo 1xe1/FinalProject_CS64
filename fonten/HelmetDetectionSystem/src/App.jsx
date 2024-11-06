@@ -14,6 +14,8 @@ import Unauthorized from "./Components/Unauthorized";
 import StudentDetails from "./Components/StudentDetails";
 import ApproveUserRegistrations from "./Components/ApproveUserRegistrations";
 import TeachersList from "./Components/TeachersList";
+import AddTeacher from "./Components/AddTeacher";
+import WarningPage from "./Components/WarningPage";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -59,6 +61,14 @@ function App() {
               <Route
                 path="/TeachersList"
                 element={<PrivateRoute element={<TeachersList />} requiredRole="admin" />}
+              />
+              <Route
+                path="/AddTeacher"
+                element={<PrivateRoute element={<AddTeacher />} requiredRole="admin" />}
+              />
+              <Route
+                path="/WarningPage"
+                element={<PrivateRoute element={<WarningPage />} requiredRole="admin" />}
               />
               <Route path="/Register" element={<Register />} />
               <Route path="/Unauthorized" element={<Unauthorized />} />

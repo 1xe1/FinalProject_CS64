@@ -118,15 +118,16 @@ function Register() {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-pink-500 to-blue-700">
-      <div className="bg-white p-10 w-full max-w-4xl rounded-lg shadow-xl">
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500">
         <ToastContainer />
-        <h2 className="mb-8 text-3xl font-bold text-gray-700 text-center">ลงทะเบียน</h2>
+
+      <div className="bg-white/95 backdrop-blur-sm p-8 lg:p-12 w-full max-w-4xl rounded-2xl shadow-2xl mx-4">
+        <h2 className="mb-10 text-4xl font-bold text-gray-800 text-center">ลงทะเบียน</h2>
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* รหัสนักศึกษา */}
-            <div className="flex flex-col">
-              <label htmlFor="studentID" className="mb-2 font-medium text-gray-600">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {/* Input fields - update the className for all input/select elements */}
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="studentID" className="text-sm font-semibold text-gray-700">
                 รหัสนักศึกษา
               </label>
               <input
@@ -144,13 +145,13 @@ function Register() {
                 required
                 pattern="\d{9}"
                 title="กรุณากรอกตัวเลข 9 ตัว"
-                className="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 outline-none"
+                className="p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
               />
             </div>
 
             {/* หมายเลขทะเบียนรถ */}
-            <div className="flex flex-col">
-              <label htmlFor="licensePlate" className="mb-2 font-medium text-gray-600">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="licensePlate" className="text-sm font-semibold text-gray-700">
                 หมายเลขทะเบียนรถ
               </label>
               <input
@@ -161,13 +162,13 @@ function Register() {
                 value={studentInfo.licensePlate}
                 onChange={handleChange}
                 required
-                className="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 outline-none"
+                className="p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
               />
             </div>
 
             {/* ชื่อนักศึกษา */}
-            <div className="flex flex-col">
-              <label htmlFor="firstName" className="mb-2 font-medium text-gray-600">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="firstName" className="text-sm font-semibold text-gray-700">
                 ชื่อ
               </label>
               <input
@@ -178,13 +179,13 @@ function Register() {
                 value={studentInfo.firstName}
                 onChange={handleChange}
                 required
-                className="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 outline-none"
+                className="p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
               />
             </div>
 
             {/* นามสกุลนักศึกษา */}
-            <div className="flex flex-col">
-              <label htmlFor="lastName" className="mb-2 font-medium text-gray-600">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="lastName" className="text-sm font-semibold text-gray-700">
                 นามสกุล
               </label>
               <input
@@ -195,13 +196,13 @@ function Register() {
                 value={studentInfo.lastName}
                 onChange={handleChange}
                 required
-                className="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 outline-none"
+                className="p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
               />
             </div>
 
             {/* เลือกคณะ */}
-            <div className="flex flex-col">
-              <label htmlFor="faculty" className="mb-2 font-medium text-gray-600">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="faculty" className="text-sm font-semibold text-gray-700">
                 เลือกคณะ
               </label>
               <select
@@ -210,7 +211,7 @@ function Register() {
                 value={studentInfo.faculty}
                 onChange={handleChange}
                 required
-                className="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 outline-none"
+                className="p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
               >
                 <option value="">เลือกคณะ</option>
                 {faculties.map((faculty) => (
@@ -222,8 +223,8 @@ function Register() {
             </div>
 
             {/* เลือกสาขาวิชา */}
-            <div className="flex flex-col">
-              <label htmlFor="department" className="mb-2 font-medium text-gray-600">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="department" className="text-sm font-semibold text-gray-700">
                 เลือกสาขา
               </label>
               <select
@@ -232,7 +233,7 @@ function Register() {
                 value={studentInfo.department}
                 onChange={handleChange}
                 required
-                className="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 outline-none"
+                className="p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
               >
                 <option value="">เลือกสาขา</option>
                 {filteredDepartments.map((department) => (
@@ -244,8 +245,8 @@ function Register() {
             </div>
 
             {/* อาจารย์ที่ปรึกษา */}
-            <div className="flex flex-col">
-              <label htmlFor="teacherID" className="mb-2 font-medium text-gray-600">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="teacherID" className="text-sm font-semibold text-gray-700">
                 อาจารย์ที่ปรึกษา
               </label>
               <select
@@ -254,7 +255,7 @@ function Register() {
                 value={studentInfo.teacherID}
                 onChange={handleChange}
                 required
-                className="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 outline-none"
+                className="p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
               >
                 <option value="">เลือกอาจารย์ที่ปรึกษา</option>
                 {teachers.map((teacher) => (
@@ -266,8 +267,8 @@ function Register() {
             </div>
 
             {/* รหัสผ่าน */}
-            <div className="flex flex-col">
-              <label htmlFor="password" className="mb-2 font-medium text-gray-600">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="password" className="text-sm font-semibold text-gray-700">
                 รหัสผ่าน
               </label>
               <input
@@ -278,13 +279,13 @@ function Register() {
                 value={studentInfo.password}
                 onChange={handleChange}
                 required
-                className="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 outline-none"
+                className="p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
               />
             </div>
 
             {/* ยืนยันรหัสผ่าน */}
-            <div className="flex flex-col">
-              <label htmlFor="confirmPassword" className="mb-2 font-medium text-gray-600">
+            <div className="flex flex-col space-y-2">
+              <label htmlFor="confirmPassword" className="text-sm font-semibold text-gray-700">
                 ยืนยันรหัสผ่าน
               </label>
               <input
@@ -295,26 +296,26 @@ function Register() {
                 value={studentInfo.confirmPassword}
                 onChange={handleChange}
                 required
-                className="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 outline-none"
+                className="p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
               />
             </div>
           </div>
 
-          <div className="mt-8 flex justify-center">
+          <div className="mt-10 flex flex-col items-center space-y-6">
             <button
               type="submit"
-              className="w-full max-w-xs p-3 bg-gradient-to-r from-blue-600 to-pink-500 text-white font-semibold rounded-lg hover:bg-gradient-to-r hover:from-pink-500 hover:to-blue-600 transition-colors"
+              className="w-full max-w-md p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-blue-600 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               สมัครสมาชิก
             </button>
-          </div>
 
-          <Link
-            to="/Login"
-            className="block mt-6 text-blue-600 hover:underline text-center"
-          >
-            เข้าสู่ระบบ
-          </Link>
+            <Link
+              to="/Login"
+              className="text-blue-600 hover:text-blue-800 font-medium hover:underline transition-colors duration-200"
+            >
+              มีบัญชีอยู่แล้ว? เข้าสู่ระบบ
+            </Link>
+          </div>
         </form>
       </div>
     </div>

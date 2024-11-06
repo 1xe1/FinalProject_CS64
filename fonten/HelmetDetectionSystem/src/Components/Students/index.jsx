@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { FaEye } from "react-icons/fa";
+import { format } from "date-fns";
+import { th } from "date-fns/locale";
 
 const Students = () => {
   const [students, setStudents] = useState([]);
@@ -8,13 +11,10 @@ const Students = () => {
   const [loading, setLoading] = useState(false);
   const itemsPerPage = 6;
 
-  // Retrieve the teacherID from localStorage
-  const teacherID = localStorage.getItem("userID"); // Make sure this is stored as 'userID' in login
+  const teacherID = localStorage.getItem("userID");
 
   useEffect(() => {
     setLoading(true);
-
-    // Fetch students associated with the logged-in teacher
     const fetchData = async () => {
       try {
         const response = await fetch(
@@ -29,19 +29,19 @@ const Students = () => {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [teacherID]);
 
   const filteredStudents = useMemo(() => {
-    return students.filter(
-      (student) =>
-        searchQuery
-          ? student.FirstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            student.LastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            student.StudentStatus.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            student.StudentID.toString().includes(searchQuery)
-          : true
+    return students.filter((student) =>
+      searchQuery
+        ? student.FirstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          student.LastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          student.StudentStatus.toLowerCase().includes(
+            searchQuery.toLowerCase()
+          ) ||
+          student.StudentID.toString().includes(searchQuery)
+        : true
     );
   }, [students, searchQuery]);
 
@@ -62,14 +62,12 @@ const Students = () => {
           ข้อมูลนักศึกษา
         </h1>
 
-        <div className="mb-6">
-          <label className="block text-sm font-semibold text-gray-600 mb-2">
-            ค้นหา:
-          </label>
+        <div className="relative flex justify-end">
           <input
-            type="text"
-            className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="ค้นหา"
+            placeholder="Search..."
+            className="input shadow-lg focus:border-2 border-gray-300 px-5 py-3 rounded-xl w-56 transition-all focus:w-64 outline-none"
+            name="search"
+            type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -80,11 +78,12 @@ const Students = () => {
         <table className="min-w-full bg-white">
           <thead className="bg-[#111926] text-white">
             <tr>
-              <th className="w-1/4 py-3 px-4 text-left">รหัสนักศึกษา</th>
-              <th className="w-1/4 py-3 px-4 text-left">ชื่อ</th>
-              <th className="w-1/4 py-3 px-4 text-left">นามสกุล</th>
-              <th className="w-1/4 py-3 px-4 text-left">สถานะ</th>
-              <th className="py-3 px-4 text-left">* </th>
+              <th className="py-3 px-4 text-left">รหัสนักศึกษา</th>
+              <th className="py-3 px-4 text-left">ชื่อ</th>
+              <th className="py-3 px-4 text-left">นามสกุล</th>
+              <th className="py-3 px-4 text-left">สถานะ</th>
+              <th className="py-3 px-4 text-left">การตรวจจับล่าสุด</th>
+              <th className="py-3 px-4 text-left">เพิ่มเติม</th>
             </tr>
           </thead>
           <tbody className="text-gray-700">
@@ -100,11 +99,16 @@ const Students = () => {
                 <td className="py-3 px-4">{student.LastName}</td>
                 <td className="py-3 px-4">{student.StudentStatus}</td>
                 <td className="py-3 px-4">
+                  {student.DetectionTime
+                    ? format(new Date(student.DetectionTime), "PPpp", { locale: th })
+                    : "ไม่มีข้อมูลการตรวจจับ"}
+                </td>
+                <td className="py-3 px-4">
                   <Link
                     to={`/students/${student.StudentID}`}
                     className="flex items-center justify-center bg-transparent border border-blue-500 text-blue-500 px-4 py-2 rounded-full hover:bg-blue-500 hover:text-white hover:shadow-lg transition duration-300"
                   >
-                    ดูรายละเอียด
+                    <FaEye />
                   </Link>
                 </td>
               </tr>
