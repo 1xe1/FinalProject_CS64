@@ -287,8 +287,8 @@ const TeachersList = () => {
                 className="hover:bg-gray-50 transition"
               >
                 {/* <td className="py-4 px-4">{teacher.TeacherID}</td> */}
-                <td className="py-4 px-4">{teacher.FirstName}</td>
-                <td className="py-4 px-4">{teacher.LastName}</td>
+                <td className="py-4 px-4 whitespace-nowrap overflow-hidden">{teacher.FirstName}</td>
+                <td className="py-4 px-4 whitespace-nowrap overflow-hidden">{teacher.LastName}</td>
                 <td className="py-4 px-4">{teacher.Email}</td>
                 <td className="py-4 px-4">{teacher.Faculty}</td>
                 <td className="py-4 px-4">{teacher.Department}</td>

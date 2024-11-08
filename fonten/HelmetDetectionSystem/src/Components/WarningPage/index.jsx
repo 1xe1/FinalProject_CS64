@@ -3,6 +3,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Zoom from 'react-medium-image-zoom';
 import 'react-medium-image-zoom/dist/styles.css';
+import { FaTrash, FaCalendarAlt, FaCheckSquare } from 'react-icons/fa';
 
 const WarningPage = () => {
   const [images, setImages] = useState([]);
@@ -56,6 +57,47 @@ const WarningPage = () => {
 
   const handlePreviousPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
+
+  const [selectedImages, setSelectedImages] = useState(new Set());
+
+  const deleteImages = async (imagesToDelete) => {
+    try {
+      for (const imageUrl of imagesToDelete) {
+        const filename = imageUrl.split('/').pop();
+        const response = await fetch(
+          `http://localhost:3000/api/warning-images/${filename}`,
+          { method: 'DELETE' }
+        );
+        if (!response.ok) throw new Error(`Failed to delete ${filename}`);
+      }
+      
+      // Refresh images list
+      setImages(images.filter(img => !imagesToDelete.includes(img)));
+      setSelectedImages(new Set());
+      toast.success('ลบรูปภาพเรียบร้อยแล้ว');
+    } catch (err) {
+      toast.error('เกิดข้อผิดพลาดในการลบรูปภาพ');
+    }
+  };
+
+  const deleteImagesByDateRange = () => {
+    const imagesToDelete = images.filter((url) => {
+      const fileName = url.split('/').pop();
+      const dateTimeString = fileName.match(/\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/);
+      if (dateTimeString) {
+        const [datePart, timePart] = dateTimeString[0].split('_');
+        const dateTime = new Date(`${datePart}T${timePart.replace(/-/g, ':')}`);
+        const start = startDateTime ? new Date(startDateTime) : null;
+        const end = endDateTime ? new Date(endDateTime) : null;
+        return (!start || dateTime >= start) && (!end || dateTime <= end);
+      }
+      return false;
+    });
+    
+    if (window.confirm(`ต้องการลบรูปภาพทั้งหมด ${imagesToDelete.length} รูปในช่วงเวลาที่เลือกหรือไม่?`)) {
+      deleteImages(imagesToDelete);
+    }
   };
 
   useEffect(() => {
@@ -147,6 +189,24 @@ const WarningPage = () => {
             className="border border-gray-300 p-3 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out"
           />
         </div>
+        
+        <div className="flex gap-4 mt-4 w-full justify-center">
+          <button
+            onClick={deleteImagesByDateRange}
+            className="px-6 py-3 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 flex items-center gap-2"
+          >
+            <FaTrash /> ลบรูปภาพตามช่วงเวลา
+          </button>
+          
+          {selectedImages.size > 0 && (
+            <button
+              onClick={() => deleteImages([...selectedImages])}
+              className="px-6 py-3 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 flex items-center gap-2"
+            >
+              <FaTrash /> ลบรูปที่เลือก ({selectedImages.size})
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
@@ -157,9 +217,28 @@ const WarningPage = () => {
           if (dateTimeString) {
             const [datePart, timePart] = dateTimeString[0].split('_');
             const time = timePart.replace(/-/g, ':');
+            const isSelected = selectedImages.has(url);
 
             return (
-              <div key={index} className="rounded-2xl overflow-hidden shadow-xl border border-gray-200 p-8 bg-white transform transition duration-500 hover:scale-105">
+              <div 
+                key={index} 
+                className={`rounded-2xl overflow-hidden shadow-xl border-2 p-8 bg-white transform transition duration-500 hover:scale-105 relative
+                  ${isSelected ? 'border-blue-500' : 'border-gray-200'}`}
+                onClick={() => {
+                  const newSelected = new Set(selectedImages);
+                  if (isSelected) {
+                    newSelected.delete(url);
+                  } else {
+                    newSelected.add(url);
+                  }
+                  setSelectedImages(newSelected);
+                }}
+              >
+                {isSelected && (
+                  <div className="absolute top-4 right-4 text-blue-500 text-2xl">
+                    <FaCheckSquare />
+                  </div>
+                )}
                 <Zoom>
                   <img
                     src={url}
@@ -167,8 +246,9 @@ const WarningPage = () => {
                     className="w-full h-64 object-cover mb-5 rounded-lg"
                   />
                 </Zoom>
-                <div className="text-sm text-gray-600">
-                  วันที่: {datePart} เวลา: {time}
+                <div className="text-sm text-gray-600 flex items-center gap-2">
+                  <FaCalendarAlt />
+                  <span>วันที่: {datePart} เวลา: {time}</span>
                 </div>
               </div>
             );

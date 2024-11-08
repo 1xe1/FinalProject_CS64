@@ -56,6 +56,36 @@ app.get("/api/warning-images", (req, res) => {
   }
 });
 
+app.delete("/api/warning-images/:filename", (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filepath = path.join(IMAGE_DIRECTORY, filename);
+
+    // ตรวจสอบว่าไฟล์มีอยู่จริง
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).json({ 
+        error: "File not found",
+        details: "The specified image does not exist" 
+      });
+    }
+
+    // ลบไฟล์
+    fs.unlinkSync(filepath);
+    console.log('Deleted image:', filename);
+    
+    res.json({ 
+      message: "Image deleted successfully",
+      filename: filename 
+    });
+
+  } catch (error) {
+    console.error("Error deleting image:", error);
+    res.status(500).json({ 
+      error: "Could not delete image",
+      details: error.message 
+    });
+  }
+});
 
 // Serve static files from the "public/images" folder
 app.use("/images", express.static(path.join(__dirname, "public/images")));
@@ -101,7 +131,7 @@ app.get("/api/students", (req, res) => {
 
   // SQL query to fetch students and their latest detection data
   const query = `
-    SELECT s.StudentID, s.FirstName, s.LastName, s.StudentStatus, h.DetectionTime, h.ImageURL
+    SELECT s.StudentID, s.FirstName, s.LastName, s.StudentStatus, s.LicensePlate, h.DetectionTime, h.ImageURL
     FROM students s
     LEFT JOIN (
       SELECT StudentID, MAX(DetectionTime) AS DetectionTime, ImageURL
@@ -382,10 +412,9 @@ app.get('/api/user/statistics', (req, res) => {
 
 // Endpoint to get statistics data
 app.get("/api/statistics", (req, res) => {
-  // รับค่า selectedDate จาก query parameters หรือใช้วันที่ปัจจุบันเป็นค่าเริ่มต้น
   const selectedDate = req.query.selectedDate || new Date().toISOString().slice(0, 10);
-  const selectedMonth = new Date(selectedDate).getMonth() + 1; // ดึงค่าเดือนจากวันที่ที่เลือก
-  const selectedYear = new Date(selectedDate).getFullYear(); // ดึงค่าปีจากวันที่ที่เลือก
+  const selectedMonth = new Date(selectedDate).getMonth() + 1;
+  const selectedYear = req.query.selectedYear || new Date(selectedDate).getFullYear(); // รับค่าปีจาก query parameters
 
   const todayQuery = `
     SELECT COUNT(*) AS count 
@@ -400,14 +429,15 @@ app.get("/api/statistics", (req, res) => {
   `;
   
   const allTimeQuery = `
-    SELECT COUNT(*) AS count 
-    FROM helmetdetection
-  `;
+  SELECT COUNT(*) AS count 
+  FROM helmetdetection
+  WHERE YEAR(DetectionTime) = ?
+`;
   
   const monthlyDataQuery = `
     SELECT MONTH(DetectionTime) AS month, COUNT(*) AS count
     FROM helmetdetection
-    WHERE YEAR(DetectionTime) = YEAR(CURDATE())
+    WHERE YEAR(DetectionTime) = ?
     GROUP BY MONTH(DetectionTime)
     ORDER BY MONTH(DetectionTime)
   `;
@@ -422,12 +452,12 @@ app.get("/api/statistics", (req, res) => {
         return res.status(500).json({ error: "Error fetching this month's data" });
       }
 
-      connection.query(allTimeQuery, (allTimeError, allTimeResults) => {
+      connection.query(allTimeQuery, [selectedYear], (allTimeError, allTimeResults) => {
         if (allTimeError) {
           return res.status(500).json({ error: "Error fetching all-time data" });
         }
 
-        connection.query(monthlyDataQuery, (monthlyDataError, monthlyDataResults) => {
+        connection.query(monthlyDataQuery, [selectedYear], (monthlyDataError, monthlyDataResults) => {
           if (monthlyDataError) {
             return res.status(500).json({ error: "Error fetching monthly data" });
           }
@@ -463,7 +493,7 @@ app.get("/api/statistics", (req, res) => {
 });
 
 app.get("/api/statistics/hourly", (req, res) => {
-  const selectedDate = req.query.selectedDate || new Date().toISOString().slice(0, 10); // Default to today
+  const selectedDate = req.query.selectedDate || new Date().toISOString().slice(0, 10);
   const hourlyQuery = `
     SELECT HOUR(DetectionTime) AS hour, COUNT(*) AS count
     FROM helmetdetection
@@ -492,8 +522,8 @@ app.get("/api/statistics/hourly", (req, res) => {
 });
 
 app.get("/api/statistics/daily", (req, res) => {
-  const selectedMonth = req.query.selectedMonth || new Date().getMonth() + 1; // Default to current month
-  const selectedYear = req.query.selectedYear || new Date().getFullYear(); // Default to current year
+  const selectedMonth = req.query.selectedMonth || new Date().getMonth() + 1;
+  const selectedYear = req.query.selectedYear || new Date().getFullYear();
 
   const dailyQuery = `
     SELECT DAY(DetectionTime) AS day, COUNT(*) AS count
@@ -521,6 +551,7 @@ app.get("/api/statistics/daily", (req, res) => {
     });
   });
 });
+
 
 
 // Endpoint to get detection data for admin based on the selected date
@@ -819,147 +850,108 @@ app.put("/api/students/:studentID/status", (req, res) => {
 // Endpoint to export student data without helmet
 app.get("/api/export/custom-format", async (req, res) => {
   try {
-    // Query to select all students, showing detections where available
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: "กรุณาระบุวันที่เริ่มต้นและวันที่สิ้นสุด" });
+    }
+
+    // หาเดือนเริ่มต้นและเดือนสิ้นสุด
+    const startMonth = new Date(startDate).getMonth() + 1;
+    const endMonth = new Date(endDate).getMonth() + 1;
+    const startYear = new Date(startDate).getFullYear();
+    const endYear = new Date(endDate).getFullYear();
+
+    // สร้าง dynamic columns ตามช่วงเดือนที่เลือก
+    let monthColumns = [];
+    const thaiMonths = [
+      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+
+    // สร้าง columns ตามช่วงเดือนที่เลือก
+    if (startYear === endYear) {
+      for (let m = startMonth; m <= endMonth; m++) {
+        monthColumns.push(`COALESCE(SUM(CASE WHEN md.detection_month = ${m} THEN md.count ELSE 0 END), 0) AS '${thaiMonths[m-1]}'`);
+      }
+    } else {
+      // กรณีข้ามปี
+      for (let m = startMonth; m <= 12; m++) {
+        monthColumns.push(`COALESCE(SUM(CASE WHEN md.detection_month = ${m} THEN md.count ELSE 0 END), 0) AS '${thaiMonths[m-1]}'`);
+      }
+      for (let m = 1; m <= endMonth; m++) {
+        monthColumns.push(`COALESCE(SUM(CASE WHEN md.detection_month = ${m} THEN md.count ELSE 0 END), 0) AS '${thaiMonths[m-1]}'`);
+      }
+    }
+
     const query = `
+      WITH MonthlyDetections AS (
+        SELECT 
+          StudentID,
+          MONTH(DetectionTime) as detection_month,
+          COUNT(*) as count
+        FROM 
+          helmetdetection
+        WHERE 
+          DetectionTime BETWEEN ? AND ?
+        GROUP BY 
+          StudentID, MONTH(DetectionTime)
+      )
       SELECT 
         s.StudentID AS 'รหัสนักศึกษา',
         s.FirstName AS 'ชื่อ',
         s.LastName AS 'นามสกุล',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 1), 0) AS 'มกราคม',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 2), 0) AS 'กุมภาพันธ์',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 3), 0) AS 'มีนาคม',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 4), 0) AS 'เมษายน',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 5), 0) AS 'พฤษภาคม',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 6), 0) AS 'มิถุนายน',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 7), 0) AS 'กรกฎาคม',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 8), 0) AS 'สิงหาคม',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 9), 0) AS 'กันยายน',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 10), 0) AS 'ตุลาคม',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 11), 0) AS 'พฤศจิกายน',
-        IFNULL(SUM(MONTH(d.DetectionTime) = 12), 0) AS 'ธันวาคม',
-        IFNULL(COUNT(d.DetectionID), 0) AS 'ทั้งหมด'
+        ${monthColumns.join(',\n        ')},
+        COALESCE(SUM(md.count), 0) AS 'ทั้งหมด'
       FROM 
         students s
       LEFT JOIN 
-        helmetdetection d ON s.StudentID = d.StudentID
+        MonthlyDetections md ON s.StudentID = md.StudentID
       GROUP BY 
         s.StudentID, s.FirstName, s.LastName
       ORDER BY 
         s.StudentID;
     `;
 
-    // Execute the query
-    connection.query(query, async (error, results) => {
+    // ลดจำนวนพารามิเตอร์ลงเหลือแค่ 2 ตัว
+    connection.query(query, [startDate, endDate], async (error, results) => {
       if (error) {
         console.error("Database error:", error);
         return res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
       }
 
-      // Create a new workbook and worksheet
+      // สร้าง Excel file
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('StudentsWithoutHelmet');
+      const worksheet = workbook.addWorksheet('Student Data');
 
-      // Set column widths
-      worksheet.columns = [
-        { header: 'รหัสนักศึกษา', key: 'studentId', width: 15 },
-        { header: 'ชื่อ', key: 'firstName', width: 20 },
-        { header: 'นามสกุล', key: 'lastName', width: 20 },
-        { header: 'มกราคม', key: 'jan', width: 15 },
-        { header: 'กุมภาพันธ์', key: 'feb', width: 15 },
-        { header: 'มีนาคม', key: 'mar', width: 15 },
-        { header: 'เมษายน', key: 'apr', width: 15 },
-        { header: 'พฤษภาคม', key: 'may', width: 15 },
-        { header: 'มิถุนายน', key: 'jun', width: 15 },
-        { header: 'กรกฎาคม', key: 'jul', width: 15 },
-        { header: 'สิงหาคม', key: 'aug', width: 15 },
-        { header: 'กันยายน', key: 'sep', width: 15 },
-        { header: 'ตุลาคม', key: 'oct', width: 15 },
-        { header: 'พฤศจิกายน', key: 'nov', width: 15 },
-        { header: 'ธันวาคม', key: 'dec', width: 15 },
-        { header: 'ทั้งหมด', key: 'total', width: 10 }
-      ];
+      // กำหนด headers และความกว้างคอลัมน์
+      const headers = Object.keys(results[0]);
+      worksheet.addRow(headers);
 
-      // Merge the cells for the first row
-      worksheet.mergeCells('A1:A2'); // รหัสนักศึกษา
-      worksheet.mergeCells('B1:B2'); // ชื่อ
-      worksheet.mergeCells('C1:C2'); // นามสกุล
-      worksheet.mergeCells('D1:O1'); // Merge cells for the months' header
-      worksheet.mergeCells('P1:P2'); // ทั้งหมด
-
-      // Set the first row values
-      worksheet.getCell('A1').value = 'รหัสนักศึกษา';
-      worksheet.getCell('B1').value = 'ชื่อ';
-      worksheet.getCell('C1').value = 'นามสกุล';
-      worksheet.getCell('D1').value = 'เดือนที่ถูกตรวจจับไม่สวมหมวกกันน็อก';
-
-      // Set the second row values for months
-      const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-      months.forEach((month, index) => {
-        worksheet.getCell(`${String.fromCharCode(68 + index)}2`).value = month; // D2 to P2
+      // เพิ่มข้อมูล
+      results.forEach(row => {
+        worksheet.addRow(Object.values(row));
       });
 
-      // Set styles for header rows
-      worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber <= 2) {
-          row.eachCell((cell) => {
-            cell.font = { name: 'TH Sarabun New', bold: true, size: 16 };
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            cell.border = {
-              top: { style: 'thin' },
-              left: { style: 'thin' },
-              bottom: { style: 'thin' },
-              right: { style: 'thin' }
-            };
-          });
+      // จัดรูปแบบ
+      worksheet.columns.forEach((column, index) => {
+        if (index < 3) { // รหัสนักศึกษา, ชื่อ, นามสกุล
+          column.width = 20;
+        } else { // คอลัมน์เดือนและยอดรวม
+          column.width = 15;
+        }
+        // จัดกึ่งกลางสำหรับตัวเลข
+        if (index >= 3) {
+          column.alignment = { horizontal: 'center' };
         }
       });
 
-      // Insert the data rows
-      results.forEach((result, index) => {
-        const row = worksheet.addRow({
-          studentId: result['รหัสนักศึกษา'],
-          firstName: result['ชื่อ'],
-          lastName: result['นามสกุล'],
-          jan: result['มกราคม'],
-          feb: result['กุมภาพันธ์'],
-          mar: result['มีนาคม'],
-          apr: result['เมษายน'],
-          may: result['พฤษภาคม'],
-          jun: result['มิถุนายน'],
-          jul: result['กรกฎาคม'],
-          aug: result['สิงหาคม'],
-          sep: result['กันยายน'],
-          oct: result['ตุลาคม'],
-          nov: result['พฤศจิกายน'],
-          dec: result['ธันวาคม'],
-          total: result['ทั้งหมด']
-        });
-
-        // Set font style for each cell in the data rows
-        row.eachCell((cell) => {
-          cell.font = { name: 'TH Sarabun New', size: 16 };
-          cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' }
-          };
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        });
-      });
-
-      // Generate a buffer for the workbook and send it as a response
+      // สร้าง buffer
       const buffer = await workbook.xlsx.writeBuffer();
 
-      res.setHeader(
-        "Content-Disposition",
-        "attachment; filename=students_without_helmet.xlsx"
-      );
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
-
+      // ส่งไฟล์กลับ
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=students_without_helmet.xlsx');
       res.send(buffer);
     });
   } catch (error) {
@@ -967,7 +959,6 @@ app.get("/api/export/custom-format", async (req, res) => {
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการสร้างไฟล์ Excel" });
   }
 });
-
 
 // Endpoint for getting all teachers, including FacultyID and DepartmentID
 app.get("/api/Adminteachers", async (req, res) => {

@@ -85,7 +85,7 @@ const Navbar = () => {
                 className="flex items-center p-2 rounded hover:bg-[#1e2a38] transition-colors"
               >
                 <Icon icon="mdi:teach" className="text-2xl mr-2" />
-                อาจารย์
+                อาจารย์ที่ปรึกษา
               </Link>
             </div>
           )}

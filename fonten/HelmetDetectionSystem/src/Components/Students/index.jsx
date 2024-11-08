@@ -81,6 +81,7 @@ const Students = () => {
               <th className="py-3 px-4 text-left">รหัสนักศึกษา</th>
               <th className="py-3 px-4 text-left">ชื่อ</th>
               <th className="py-3 px-4 text-left">นามสกุล</th>
+              <th className="py-3 px-4 text-left">ป้ายทะเบียน</th>
               <th className="py-3 px-4 text-left">สถานะ</th>
               <th className="py-3 px-4 text-left">การตรวจจับล่าสุด</th>
               <th className="py-3 px-4 text-left">เพิ่มเติม</th>
@@ -97,6 +98,7 @@ const Students = () => {
                 <td className="py-3 px-4">{student.StudentID}</td>
                 <td className="py-3 px-4">{student.FirstName}</td>
                 <td className="py-3 px-4">{student.LastName}</td>
+                <td className="py-3 px-4">{student.LicensePlate}</td>
                 <td className="py-3 px-4">{student.StudentStatus}</td>
                 <td className="py-3 px-4">
                   {student.DetectionTime

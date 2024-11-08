@@ -49,6 +49,11 @@ const AdminDashboard = () => {
   });
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false); // State for loading indicator
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [exportDateRange, setExportDateRange] = useState({
+    startDate: new Date(),
+    endDate: new Date(),
+  });
 
   const fetchStatistics = async (date) => {
     try {
@@ -152,9 +157,12 @@ const AdminDashboard = () => {
 
   const handleExport = async () => {
     try {
-      setIsLoading(true); // Start loading
+      setIsLoading(true);
+      const startDate = exportDateRange.startDate.toISOString().slice(0, 10);
+      const endDate = exportDateRange.endDate.toISOString().slice(0, 10);
+
       const response = await fetch(
-        "http://localhost:3000/api/export/custom-format",
+        `http://localhost:3000/api/export/custom-format?startDate=${startDate}&endDate=${endDate}`,
         {
           method: "GET",
           headers: {
@@ -166,21 +174,38 @@ const AdminDashboard = () => {
 
       if (response.ok) {
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", "students_without_helmet.xlsx");
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        saveAs(blob, "students_without_helmet.xlsx");
+        setIsModalOpen(false);
       } else {
         console.error("Failed to export data");
       }
     } catch (error) {
       console.error("Error exporting data:", error);
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
+  };
+
+  const getThaiMonth = (month) => {
+    const thaiMonths = [
+      "มกราคม",
+      "กุมภาพันธ์",
+      "มีนาคม",
+      "เมษายน",
+      "พฤษภาคม",
+      "มิถุนายน",
+      "กรกฎาคม",
+      "สิงหาคม",
+      "กันยายน",
+      "ตุลาคม",
+      "พฤศจิกายน",
+      "ธันวาคม",
+    ];
+    return thaiMonths[month];
+  };
+
+  const getThaiYear = (year) => {
+    return year + 543;
   };
 
   return (
@@ -205,7 +230,9 @@ const AdminDashboard = () => {
                 className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
                 onClick={() => handlePeriodClick("today")}
               >
-                <h2 className="mb-2 text-2xl text-blue-600">วันนี้</h2>
+                <h2 className="mb-2 text-2xl text-blue-600">
+                  วันที่ {selectedDate.getDate()}
+                </h2>
                 <p className="text-lg text-gray-700">
                   จำนวน: {statistics.today}
                 </p>
@@ -214,7 +241,9 @@ const AdminDashboard = () => {
                 className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
                 onClick={() => handlePeriodClick("thisMonth")}
               >
-                <h2 className="mb-2 text-2xl text-blue-600">เดือนนี้</h2>
+                <h2 className="mb-2 text-2xl text-blue-600">
+                  เดือน {getThaiMonth(selectedDate.getMonth())}
+                </h2>
                 <p className="text-lg text-gray-700">
                   จำนวน: {statistics.thisMonth}
                 </p>
@@ -223,7 +252,9 @@ const AdminDashboard = () => {
                 className="bg-white p-5 rounded-lg shadow-lg text-center w-1/3 cursor-pointer transition duration-300 hover:bg-blue-100"
                 onClick={() => handlePeriodClick("allTime")}
               >
-                <h2 className="mb-2 text-2xl text-blue-600">ทั้งหมด</h2>
+                <h2 className="mb-2 text-2xl text-blue-600">
+                  ปี {getThaiYear(selectedDate.getFullYear())}
+                </h2>
                 <p className="text-lg text-gray-700">
                   จำนวน: {statistics.allTime}
                 </p>
@@ -233,7 +264,14 @@ const AdminDashboard = () => {
             <div className="w-full max-w-4xl mb-10 flex justify-between items-center">
               <div className="flex-1 mr-4">
                 <div className="relative">
+                  <label
+                    htmlFor="datePicker"
+                    className="block text-lg text-gray-700 mb-2"
+                  >
+                    เลือกวันที่:
+                  </label>
                   <DatePicker
+                    id="datePicker"
                     selected={selectedDate}
                     onChange={(date) => setSelectedDate(date)}
                     dateFormat="dd/MM/yyyy"
@@ -247,7 +285,7 @@ const AdminDashboard = () => {
               </div>
 
               <button
-                onClick={handleExport}
+                onClick={() => setIsModalOpen(true)}
                 className="px-5 py-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-lg shadow-md flex items-center gap-2 hover:scale-105 transform transition duration-300 ease-in-out hover:bg-blue-600"
               >
                 <FaDownload />
@@ -306,6 +344,60 @@ const AdminDashboard = () => {
           </>
         )}
       </div>
+
+      {/* Export Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h2 className="text-xl font-bold mb-4">เลือกช่วงวันที่</h2>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                วันที่เริ่มต้น
+              </label>
+              <DatePicker
+                selected={exportDateRange.startDate}
+                onChange={(date) =>
+                  setExportDateRange((prev) => ({ ...prev, startDate: date }))
+                }
+                dateFormat="dd/MM/yyyy"
+                className="w-full p-2 border rounded"
+              />
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                วันที่สิ้นสุด
+              </label>
+              <DatePicker
+                selected={exportDateRange.endDate}
+                onChange={(date) =>
+                  setExportDateRange((prev) => ({ ...prev, endDate: date }))
+                }
+                dateFormat="dd/MM/yyyy"
+                className="w-full p-2 border rounded"
+                minDate={exportDateRange.startDate}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleExport}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                disabled={isLoading}
+              >
+                {isLoading ? "กำลังดาวน์โหลด..." : "ดาวน์โหลด"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
