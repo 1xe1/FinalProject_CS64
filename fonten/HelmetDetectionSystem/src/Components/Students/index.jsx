@@ -131,9 +131,21 @@ const Students = () => {
         >
           ก่อนหน้า
         </button>
-        <span className="text-gray-600">
-          Page {currentPage} of {totalPages}
-        </span>
+        <div className="flex items-center gap-2">
+          {[...Array(totalPages)].map((_, index) => (
+            <button
+              key={index + 1}
+              className={`px-3 py-1 rounded-lg ${
+                currentPage === index + 1
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+              onClick={() => setCurrentPage(index + 1)}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
         <button
           className={`px-4 py-2 rounded-lg shadow ${
             currentPage === totalPages

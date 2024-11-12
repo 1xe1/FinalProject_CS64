@@ -7,6 +7,9 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import th from "date-fns/locale/th";
 import "react-datepicker/dist/react-datepicker.css";
 import { FaSearch, FaSave } from "react-icons/fa";
+import { IoSchool, IoCarSport } from "react-icons/io5";
+import { FaUserGraduate, FaBuilding, FaBookReader } from "react-icons/fa";
+import { MdClose } from "react-icons/md";
 
 registerLocale("th", th);
 
@@ -26,6 +29,7 @@ const StudentDetails = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -156,125 +160,147 @@ const StudentDetails = () => {
   }
 
   return (
-    <div className="p-5 bg-gray-100 min-h-screen flex flex-col items-center">
+    <div className="p-5 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen flex flex-col items-center">
       <ToastContainer />
+      
       <div className="w-full flex mb-8">
         <button
-          class="bg-white text-center w-36 rounded-2xl h-10 relative text-black text-lg font-semibold group"
-          type="button"
           onClick={() => navigate(-1)}
+          className="group relative overflow-hidden px-8 py-2 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
         >
-          <div class="bg-blue-600 rounded-xl h-8 w-1/4 flex items-center justify-center absolute left-1 top-[4px] group-hover:w-[136px] z-10 duration-500">
+          <span className="absolute inset-0 w-0 bg-blue-500 transition-all duration-300 ease-out group-hover:w-full"></span>
+          <span className="relative flex items-center text-gray-700 group-hover:text-white transition-colors duration-300">
             <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 1024 1024"
-              height="20px"
-              width="20px"
+              className="w-5 h-5 mr-2 transform group-hover:translate-x-[-4px] transition-transform duration-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <path
-                d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"
-                fill="#000000"
-              ></path>
-              <path
-                d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"
-                fill="#000000"
-              ></path>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
-          </div>
-          <p class="translate-x-2">ย้อนกลับ</p>
+            ย้อนกลับ
+          </span>
         </button>
       </div>
 
-      <div className="w-full max-w-3xl bg-white rounded-lg shadow-xl p-8 mb-8">
-        <h1 className="mb-8 text-4xl font-bold text-center text-gray-800">
-          ชื่อ: {student.FirstName} {student.LastName}
-        </h1>
-        <div className="border-t border-gray-300 mb-8"></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="flex flex-col space-y-2">
-            <p className="text-gray-600 text-lg font-medium">รหัสนักศึกษา</p>
-            <p className="text-gray-800 text-xl bg-gray-100 p-3 rounded-md">
-              {student.StudentID}
-            </p>
-          </div>
-          <div className="flex flex-col space-y-2">
-            <p className="text-gray-600 text-lg font-medium">สถานะ</p>
-            {isEditing ? (
-              <div className="flex space-x-2">
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
-                  className="text-gray-800 text-xl bg-gray-100 p-3 rounded-md w-full"
-                >
-                  <option value="กำลังศึกษา">กำลังศึกษา</option>
-                  <option value="ออกจากการศึกษา">ออกจากการศึกษา</option>
-                </select>
-                <button
-                  onClick={handleSaveClick}
-                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition"
-                >
-                  <FaSave />
-                </button>
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-                >
-                  ยกเลิก
-                </button>
-              </div>
-            ) : (
-              <div className="flex space-x-2">
-                <p className="text-gray-800 text-xl bg-gray-100 p-3 rounded-md flex-1">
-                  {student.StudentStatus}
-                </p>
-                <button
-                  onClick={handleStatusChange}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
-                >
-                  <FaPen />
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col space-y-2">
-            <p className="text-gray-600 text-lg font-medium">คณะ</p>
-            <p className="text-gray-800 text-xl bg-gray-100 p-3 rounded-md">
-              {student.FacultyName || "ไม่ระบุ"}
-            </p>
-          </div>
-          <div className="flex flex-col space-y-2">
-            <p className="text-gray-600 text-lg font-medium">สาขาวิชา</p>
-            <p className="text-gray-800 text-xl bg-gray-100 p-3 rounded-md">
-              {student.DepartmentName || "ไม่ระบุ"}
-            </p>
-          </div>
-          <div className="flex flex-col space-y-2 md:col-span-2">
-            <p className="text-gray-600 text-lg font-medium">ทะเบียนรถ</p>
-            <p className="text-gray-800 text-xl bg-gray-100 p-3 rounded-md">
-              {student.LicensePlate || "ไม่ระบุ"}
-            </p>
+      <button
+        onClick={() => setShowDetailsModal(true)}
+        className="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-8 mb-8 hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
+      >
+        <div className="relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full transform translate-x-16 -translate-y-16 opacity-50"></div>
+          <h1 className="mb-4 text-4xl font-bold text-center text-gray-800">
+            {student.FirstName} {student.LastName}
+          </h1>
+          <div className="flex items-center justify-center text-blue-600 group">
+            <span className="mr-2">ดูข้อมูลนักศึกษา</span>
+            <svg
+              className="w-5 h-5 transform group-hover:translate-x-1 transition-transform duration-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
           </div>
         </div>
-      </div>
+      </button>
 
-      {showConfirmation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-lg text-center w-80">
-            <h2 className="text-2xl mb-4">ยืนยันการบันทึก</h2>
-            <p className="mb-6">คุณแน่ใจหรือไม่ว่าต้องการบันทึกสถานะใหม่?</p>
-            <div className="flex justify-center space-x-4">
-              <button
-                onClick={handleStatusSave}
-                className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition"
-              >
-                ยืนยัน
-              </button>
-              <button
-                onClick={handleCancelConfirmation}
-                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition"
-              >
-                ยกเลิก
-              </button>
+      {showDetailsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+             onClick={() => setShowDetailsModal(false)}>
+          <div 
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl transform transition-all duration-300 scale-100 opacity-100"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="relative p-6 border-b">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full transform translate-x-20 -translate-y-20 opacity-50"></div>
+              <div className="flex justify-between items-center relative">
+                <h1 className="text-3xl font-bold text-gray-800">รายละเอียดนักศึกษา</h1>
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                >
+                  <MdClose className="w-6 h-6 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-shadow duration-300">
+                  <div className="flex items-center mb-2">
+                    <IoSchool className="w-6 h-6 text-blue-500 mr-2" />
+                    <p className="text-gray-600 font-medium">รหัสนักศึกษา</p>
+                  </div>
+                  <p className="text-gray-800 text-xl">{student.StudentID}</p>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-shadow duration-300">
+                  <div className="flex items-center mb-2">
+                    <FaUserGraduate className="w-6 h-6 text-blue-500 mr-2" />
+                    <p className="text-gray-600 font-medium">สถานะ</p>
+                  </div>
+                  {isEditing ? (
+                    <div className="flex space-x-2">
+                      <select
+                        value={newStatus}
+                        onChange={(e) => setNewStatus(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="กำลังศึกษา">กำลังศึกษา</option>
+                        <option value="ออกจากการศึกษา">ออกจากการศึกษา</option>
+                      </select>
+                      <button
+                        onClick={handleSaveClick}
+                        className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200"
+                      >
+                        <FaSave className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setIsEditing(false)}
+                        className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
+                      >
+                        <MdClose className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <p className="text-gray-800 text-xl">{student.StudentStatus}</p>
+                      <button
+                        onClick={handleStatusChange}
+                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                      >
+                        <FaPen className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-shadow duration-300">
+                  <div className="flex items-center mb-2">
+                    <FaBuilding className="w-6 h-6 text-blue-500 mr-2" />
+                    <p className="text-gray-600 font-medium">คณะ</p>
+                  </div>
+                  <p className="text-gray-800 text-xl">{student.FacultyName || "ไม่ระบุ"}</p>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-shadow duration-300">
+                  <div className="flex items-center mb-2">
+                    <FaBookReader className="w-6 h-6 text-blue-500 mr-2" />
+                    <p className="text-gray-600 font-medium">สาขาวิชา</p>
+                  </div>
+                  <p className="text-gray-800 text-xl">{student.DepartmentName || "ไม่ระบุ"}</p>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-shadow duration-300 md:col-span-2">
+                  <div className="flex items-center mb-2">
+                    <IoCarSport className="w-6 h-6 text-blue-500 mr-2" />
+                    <p className="text-gray-600 font-medium">ทะเบียนรถ</p>
+                  </div>
+                  <p className="text-gray-800 text-xl">{student.LicensePlate || "ไม่ระบุ"}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -290,7 +316,9 @@ const StudentDetails = () => {
           }`}
           onClick={() => filterDetections("today")}
         >
-          <h2 className="mb-2 text-2xl text-blue-600">วันนี้</h2>
+          <h2 className="mb-2 text-2xl text-blue-600">
+            วันที่ {new Date().getDate()}
+          </h2>
           <p className="text-lg text-gray-700">จำนวน: {stats.today}</p>
         </button>
         <button
@@ -299,7 +327,9 @@ const StudentDetails = () => {
           }`}
           onClick={() => filterDetections("month")}
         >
-          <h2 className="mb-2 text-2xl text-blue-600">เดือนนี้</h2>
+          <h2 className="mb-2 text-2xl text-blue-600">
+            เดือน {new Date().toLocaleDateString('th-TH', { month: 'long' })}
+          </h2>
           <p className="text-lg text-gray-700">จำนวน: {stats.month}</p>
         </button>
         <button
@@ -308,7 +338,9 @@ const StudentDetails = () => {
           }`}
           onClick={() => filterDetections("allTime")}
         >
-          <h2 className="mb-2 text-2xl text-blue-600">ทั้งหมด</h2>
+          <h2 className="mb-2 text-2xl text-blue-600">
+            ปี {new Date().getFullYear() + 543}
+          </h2>
           <p className="text-lg text-gray-700">จำนวน: {stats.allTime}</p>
         </button>
       </div>
@@ -353,6 +385,9 @@ const StudentDetails = () => {
               key={index}
               className="bg-white p-5 rounded-lg shadow-lg flex flex-col items-center hover:shadow-2xl transform hover:scale-105 transition-transform duration-300 relative group"
             >
+              <div className="absolute -top-3 -left-3 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg z-10">
+                {filteredDetections.length - index}
+              </div>
               <img
                 src={detection.ImageURL}
                 alt="Helmet Detection"
